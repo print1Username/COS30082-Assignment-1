@@ -75,3 +75,42 @@ coverage.xml
 Thumbs.db
 ehthumbs.db
 $RECYCLE.BIN/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Dataset
+data/Train/
+data/Test/
+data/*.jpg
+data/*.jpeg
+data/*.png
+data/*.txt
+
+# Model checkpoints
+checkpoints/*.pth
+checkpoints/*.pt
+checkpoints/*.ckpt
+
+# Experiment outputs
+outputs/
+runs/
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+
+# OS files
+.DS_Store
+Thumbs.db
