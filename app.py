@@ -1,2 +1,5 @@
-if __name__ == "__main__":
-	print("Hello World")
+import torch
+x = torch.rand(5, 3)
+print(x)
+
+torch.cuda.is_available()
