@@ -163,11 +163,11 @@ def clean_data_directory() -> None:
 
 	# Create data/ if it does not exist.
 	DATA_DIR.mkdir(
-		parents=True, exist_ok=True, )
+		parents = True, exist_ok = True, )
 
 	# Make sure .gitkeep exists.
 	GITKEEP_FILE.touch(
-		exist_ok=True
+		exist_ok = True
 	)
 
 	# Check every item inside data/.
@@ -225,7 +225,7 @@ def show_progress(filename, downloaded, total, speed, eta):
 			f"{percent:6.2f}% "
 			f"{format_size( downloaded )} / {format_size( total )} "
 			f"{format_size( speed )}/s "
-			f"ETA {format_time( eta )}", end="", flush=True
+			f"ETA {format_time( eta )}", end = "", flush = True
 		)
 
 	else:
@@ -235,7 +235,7 @@ def show_progress(filename, downloaded, total, speed, eta):
 		print(
 			f"\r{filename:<12} "
 			f"Downloaded {format_size( downloaded )} "
-			f"{format_size( speed )}/s", end="", flush=True
+			f"{format_size( speed )}/s", end = "", flush = True
 		)
 
 
@@ -270,7 +270,7 @@ def download_file(filename: str) -> Path:
 		try:
 			# Send HTTP request.
 			response = requests.get(
-				url, stream=True, timeout=REQUEST_TIMEOUT, allow_redirects=True, )
+				url, stream = True, timeout = REQUEST_TIMEOUT, allow_redirects = True, )
 
 			# Raise an exception for HTTP errors.
 			response.raise_for_status()
@@ -289,7 +289,7 @@ def download_file(filename: str) -> Path:
 				output_path, "wb", ) as file:
 				# Download file chunk by chunk.
 				for chunk in response.iter_content(
-					chunk_size=CHUNK_SIZE
+					chunk_size = CHUNK_SIZE
 				):
 					# Ignore empty chunks.
 					if not chunk:
@@ -391,7 +391,7 @@ def extract_zip(
 		total_files = len( members )
 
 		for index, member in enumerate(
-			members, start=1, ):
+			members, start = 1, ):
 			zip_file.extract(
 				member, DATA_DIR, )
 
