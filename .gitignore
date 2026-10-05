@@ -1,0 +1,77 @@
+# =========================
+# 1. PyCharm / JetBrains IDE
+# =========================
+# Ignore PyCharm local project configuration files
+.idea/
+*.iml
+*.iws
+*.idea_modules/
+
+# =========================
+# 2. Jupyter Notebook / IPython
+# =========================
+# Ignore history checkpoints and runtime files (Do NOT ignore *.ipynb)
+.ipynb_checkpoints/
+profile_default/
+ipython_config.py
+
+# =========================
+# 3. Python Core and Cache
+# =========================
+# Byte-compiled and cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Virtual environments (covers common naming conventions)
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Dependencies, packaging and build directories
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# =========================
+# 4. Testing and Coverage
+# =========================
+.coverage
+.pytest_cache/
+htmlcov/
+.tox/
+nosetests.xml
+coverage.xml
+
+# =========================
+# 5. OS Generated Files
+# =========================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+$RECYCLE.BIN/
