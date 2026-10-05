@@ -97,6 +97,7 @@ data/*.jpeg
 data/*.png
 data/*.txt
 data/.cache/
+data/*.zip
 
 # Model checkpoints
 checkpoints/*.pth
