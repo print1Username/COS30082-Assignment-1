@@ -68,17 +68,14 @@ REPO_ID = "print1Username/COS30082-Assignment-1"
 BRANCH = "main"
 
 # Local directory where the dataset will be stored.
-DATA_DIR = Path("data")
+DATA_DIR = Path( "data" )
 
 # File that must always be preserved.
 GITKEEP_FILE = DATA_DIR / ".gitkeep"
 
 # Files that need to be downloaded.
 DATA_FILES = [
-	"Train.zip",
-	"Test.zip",
-	"train.txt",
-	"test.txt",
+	"Train.zip", "Test.zip", "train.txt", "test.txt",
 ]
 
 # Size of each downloaded chunk.
@@ -107,7 +104,7 @@ def format_size(size_bytes: int) -> str:
 		1073741824 -> 1.00 GB
 	"""
 
-	size = float(size_bytes)
+	size = float( size_bytes )
 
 	units = ["B", "KB", "MB", "GB", "TB"]
 
@@ -132,10 +129,10 @@ def format_time(seconds: float) -> str:
 	if seconds <= 0:
 		return "00:00"
 
-	seconds = int(seconds)
+	seconds = int( seconds )
 
-	hours, remainder = divmod(seconds, 3600)
-	minutes, seconds = divmod(remainder, 60)
+	hours, remainder = divmod( seconds, 3600 )
+	minutes, seconds = divmod( remainder, 60 )
 
 	if hours > 0:
 		return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
@@ -162,13 +159,11 @@ def clean_data_directory() -> None:
 	otherwise-empty data directory.
 	"""
 
-	print("\nPreparing data directory...")
+	print( "\nPreparing data directory..." )
 
 	# Create data/ if it does not exist.
 	DATA_DIR.mkdir(
-		parents=True,
-		exist_ok=True,
-	)
+		parents=True, exist_ok=True, )
 
 	# Make sure .gitkeep exists.
 	GITKEEP_FILE.touch(
@@ -177,22 +172,20 @@ def clean_data_directory() -> None:
 
 	# Check every item inside data/.
 	for item in DATA_DIR.iterdir():
-
 		# Never delete .gitkeep.
 		if item.name == ".gitkeep":
 			continue
 
 		try:
-
 			# Remove directories recursively.
 			if item.is_dir():
-				shutil.rmtree(item)
+				shutil.rmtree( item )
 
 			# Remove files.
 			else:
 				item.unlink()
 
-			print(f"Removed: {item}")
+			print( f"Removed: {item}" )
 
 		except PermissionError:
 			raise PermissionError(
@@ -201,8 +194,8 @@ def clean_data_directory() -> None:
 				f"by another program."
 			)
 
-	print("Data directory cleaned successfully.")
-	print("Preserved: data/.gitkeep")
+	print( "Data directory cleaned successfully." )
+	print( "Preserved: data/.gitkeep" )
 
 
 # ============================================================
@@ -223,18 +216,16 @@ def show_progress(filename, downloaded, total, speed, eta):
 		percent = downloaded / total * 100
 
 		bar_length = 30
-		filled = int(bar_length * downloaded / total)
+		filled = int( bar_length * downloaded / total )
 		bar = "█" * filled + "░" * (bar_length - filled)
 
 		print(
 			f"\r{filename:<12} "
 			f"[{bar}] "
 			f"{percent:6.2f}% "
-			f"{format_size(downloaded)} / {format_size(total)} "
-			f"{format_size(speed)}/s "
-			f"ETA {format_time(eta)}",
-			end="",
-			flush=True
+			f"{format_size( downloaded )} / {format_size( total )} "
+			f"{format_size( speed )}/s "
+			f"ETA {format_time( eta )}", end="", flush=True
 		)
 
 	else:
@@ -243,10 +234,8 @@ def show_progress(filename, downloaded, total, speed, eta):
 		# and ETA cannot be calculated accurately.
 		print(
 			f"\r{filename:<12} "
-			f"Downloaded {format_size(downloaded)} "
-			f"{format_size(speed)}/s",
-			end="",
-			flush=True
+			f"Downloaded {format_size( downloaded )} "
+			f"{format_size( speed )}/s", end="", flush=True
 		)
 
 
@@ -271,27 +260,17 @@ def download_file(filename: str) -> Path:
 	output_path = DATA_DIR / filename
 
 	# Construct Hugging Face download URL.
-	url = (
-		f"https://huggingface.co/datasets/"
-		f"{REPO_ID}/resolve/{BRANCH}/{filename}"
-	)
+	url = (f"https://huggingface.co/datasets/"
+	       f"{REPO_ID}/resolve/{BRANCH}/{filename}")
 
-	print(f"\nDownloading {filename}")
+	print( f"\nDownloading {filename}" )
 
 	for attempt in range(
-		1,
-		MAX_RETRIES + 1,
-	):
-
+		1, MAX_RETRIES + 1, ):
 		try:
-
 			# Send HTTP request.
 			response = requests.get(
-				url,
-				stream=True,
-				timeout=REQUEST_TIMEOUT,
-				allow_redirects=True,
-			)
+				url, stream=True, timeout=REQUEST_TIMEOUT, allow_redirects=True, )
 
 			# Raise an exception for HTTP errors.
 			response.raise_for_status()
@@ -299,9 +278,7 @@ def download_file(filename: str) -> Path:
 			# Read total file size.
 			total_size = int(
 				response.headers.get(
-					"content-length",
-					0,
-				)
+					"content-length", 0, )
 			)
 
 			downloaded = 0
@@ -309,61 +286,41 @@ def download_file(filename: str) -> Path:
 
 			# Open destination file.
 			with open(
-				output_path,
-				"wb",
-			) as file:
-
+				output_path, "wb", ) as file:
 				# Download file chunk by chunk.
 				for chunk in response.iter_content(
 					chunk_size=CHUNK_SIZE
 				):
-
 					# Ignore empty chunks.
 					if not chunk:
 						continue
 
 					# Save chunk to disk.
-					file.write(chunk)
+					file.write( chunk )
 
 					# Update downloaded size.
-					downloaded += len(chunk)
+					downloaded += len( chunk )
 
 					# Calculate elapsed time.
-					elapsed = (
-						time.time()
-						- start_time
-					)
+					elapsed = (time.time() - start_time)
 
 					# Calculate average speed.
 					if elapsed > 0:
-						speed = (
-							downloaded
-							/ elapsed
-						)
+						speed = (downloaded / elapsed)
 					else:
 						speed = 0
 
 					# Update progress display.
 					show_progress(
-						filename,
-						downloaded,
-						total_size,
-						speed,
-						elapsed,
-					)
+						filename, downloaded, total_size, speed, elapsed, )
 
 			# Move to the next line after download.
 			print()
 
 			# Verify downloaded file size.
-			actual_size = (
-				output_path.stat().st_size
-			)
+			actual_size = (output_path.stat().st_size)
 
-			if (
-				total_size > 0
-				and actual_size != total_size
-			):
+			if (total_size > 0 and actual_size != total_size):
 				raise RuntimeError(
 					f"File size mismatch. "
 					f"Expected "
@@ -374,13 +331,12 @@ def download_file(filename: str) -> Path:
 
 			print(
 				f"Completed: {filename} "
-				f"({format_size(actual_size)})"
+				f"({format_size( actual_size )})"
 			)
 
 			return output_path
 
 		except Exception as error:
-
 			print()
 
 			print(
@@ -399,17 +355,14 @@ def download_file(filename: str) -> Path:
 
 			# Retry if attempts remain.
 			if attempt < MAX_RETRIES:
-
 				print(
 					"Retrying in 2 seconds..."
 				)
 
-				time.sleep(2)
+				time.sleep( 2 )
 
 			else:
-
 				raise RuntimeError(
-					f"Failed to download "
 					f"{filename} after "
 					f"{MAX_RETRIES} attempts."
 				)
@@ -420,9 +373,7 @@ def download_file(filename: str) -> Path:
 # ============================================================
 
 def extract_zip(
-	zip_path: Path,
-	output_dir: Path,
-) -> None:
+	zip_path: Path, output_dir: Path, ) -> None:
 	"""
 	Extract a ZIP file.
 
@@ -434,36 +385,24 @@ def extract_zip(
 	)
 
 	with ZipFile(
-		zip_path,
-		"r",
-	) as zip_file:
+		zip_path, "r", ) as zip_file:
 		members = zip_file.infolist()
 
-		total_files = len(members)
+		total_files = len( members )
 
 		for index, member in enumerate(
-			members,
-			start=1,
-		):
+			members, start=1, ):
 			zip_file.extract(
-				member,
-				DATA_DIR,
-			)
+				member, DATA_DIR, )
 
-			percentage = (
-				index / total_files * 100
-				if total_files > 0
-				else 100
-			)
+			percentage = (index / total_files * 100 if total_files > 0 else 100)
 
-			message = (
-				f"\rExtracting "
-				f"{zip_path.name}: "
-				f"{percentage:6.2f}% "
-				f"({index}/{total_files})"
-			)
+			message = (f"\rExtracting "
+			           f"{zip_path.name}: "
+			           f"{percentage:6.2f}% "
+			           f"({index}/{total_files})")
 
-			sys.stdout.write(message)
+			sys.stdout.write( message )
 			sys.stdout.flush()
 
 	print()
@@ -488,26 +427,20 @@ def verify_dataset() -> bool:
 	"""
 
 	required_paths = [
-		DATA_DIR / "Train",
-		DATA_DIR / "Test",
-		DATA_DIR / "train.txt",
-		DATA_DIR / "test.txt",
+		DATA_DIR / "Train", DATA_DIR / "Test", DATA_DIR / "train.txt", DATA_DIR / "test.txt",
 	]
 
-	print("\nChecking dataset...")
+	print( "\nChecking dataset..." )
 
 	all_exist = True
 
 	for path in required_paths:
-
 		if path.exists():
-
 			print(
 				f"[OK] {path}"
 			)
 
 		else:
-
 			print(
 				f"[MISSING] {path}"
 			)
@@ -516,13 +449,11 @@ def verify_dataset() -> bool:
 
 	# Also verify .gitkeep.
 	if GITKEEP_FILE.exists():
-
 		print(
 			f"[OK] {GITKEEP_FILE}"
 		)
 
 	else:
-
 		print(
 			f"[MISSING] {GITKEEP_FILE}"
 		)
@@ -541,14 +472,14 @@ def main() -> None:
 	Main dataset download and extraction procedure.
 	"""
 
-	print("=" * 60)
+	print( "=" * 60 )
 
 	print(
 		"COS30082 Assignment 1 - "
 		"CUB-200 Dataset Downloader"
 	)
 
-	print("=" * 60)
+	print( "=" * 60 )
 
 	# --------------------------------------------------------
 	# Step 1: Clean existing data
@@ -560,37 +491,30 @@ def main() -> None:
 	# Step 2: Download dataset files
 	# --------------------------------------------------------
 
-	downloaded_files = {}
+	downloaded_files = { }
 
 	for filename in DATA_FILES:
-		downloaded_files[filename] = (
-			download_file(filename)
-		)
+		downloaded_files[filename] = (download_file( filename ))
 
 	# --------------------------------------------------------
 	# Step 3: Extract training dataset
 	# --------------------------------------------------------
 
 	extract_zip(
-		downloaded_files["Train.zip"],
-		DATA_DIR / "Train",
-	)
+		downloaded_files["Train.zip"], DATA_DIR / "Train", )
 
 	# --------------------------------------------------------
 	# Step 4: Extract testing dataset
 	# --------------------------------------------------------
 
 	extract_zip(
-		downloaded_files["Test.zip"],
-		DATA_DIR / "Test",
-	)
+		downloaded_files["Test.zip"], DATA_DIR / "Test", )
 
 	# --------------------------------------------------------
 	# Step 5: Verify dataset
 	# --------------------------------------------------------
 
 	if verify_dataset():
-
 		print(
 			"\n" + "=" * 60
 		)
@@ -604,7 +528,6 @@ def main() -> None:
 		)
 
 	else:
-
 		print(
 			"\n" + "=" * 60
 		)
