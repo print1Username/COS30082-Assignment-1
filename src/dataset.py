@@ -450,22 +450,19 @@ if __name__ == "__main__":
 	print( "Dataset test completed successfully." )
 	print( "=" * 60 )
 
-	all_labels = [
-	    label
-	    for _, label in train_loader.dataset.dataset.samples
-	]
+	all_labels = [label for _, label in train_loader.dataset.dataset.samples]
 
 	print(
-	    f"Number of unique training classes: "
-	    f"{len(set(all_labels))}"
+		f"Number of unique training classes: "
+		f"{len( set( all_labels ) )}"
 	)
 
 	print(
-	    f"Minimum training label: "
-	    f"{min(all_labels)}"
+		f"Minimum training label: "
+		f"{min( all_labels )}"
 	)
 
 	print(
-	    f"Maximum training label: "
-	    f"{max(all_labels)}"
+		f"Maximum training label: "
+		f"{max( all_labels )}"
 	)
