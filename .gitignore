@@ -116,3 +116,9 @@ logs/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Models
+models/
+models/checkpoints/
+models/history/
+*.pth
