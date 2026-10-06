@@ -188,9 +188,9 @@ class CUB200Dataset( Dataset ):
 
 				image_path, label = parts
 
-				# The original CUB labels are 1-200.
-				# PyTorch CrossEntropyLoss expects class indices
-				# from 0 to 199.
+				# The annotation files use zero-based class labels from 0 to 199.
+				# This matches the class-index format expected by PyTorch
+				# CrossEntropyLoss.
 				label = int( label )
 
 				if not 0 <= label < NUM_CLASSES:
