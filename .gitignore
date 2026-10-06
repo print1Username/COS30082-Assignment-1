@@ -122,3 +122,4 @@ models/
 models/checkpoints/
 models/history/
 *.pth
+*.json
