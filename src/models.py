@@ -14,57 +14,43 @@ Supported models:
 All models use ImageNet pre-trained weights and are modified to
 classify 200 bird species from the CUB-200 dataset.
 
-The models can be created using:
-
-    model = create_model("resnet18")
-    model = create_model("resnet50")
-    model = create_model("efficientnet_b0")
-
-Training, loss functions, optimizers, and evaluation are handled
-in other modules.
+The module also provides functions for:
+    - Freezing the backbone while keeping the classifier trainable.
+    - Unfreezing the entire model for fine-tuning.
+    - Getting the number of model parameters.
 """
 
 import torch.nn as nn
 from torchvision import models
 
-# Number of classes in the CUB-200 dataset.
+# CUB-200 contains 200 bird species.
 NUM_CLASSES = 200
 
 
 def create_model(
 	model_name: str, num_classes: int = NUM_CLASSES, pretrained: bool = True, ):
 	"""
-	Create and return a classification model.
+	Create a CNN model for CUB-200 classification.
 
 	Args:
-		model_name (str):
+		model_name:
 			Name of the model to create.
-
 			Supported values:
 				- "resnet18"
 				- "resnet50"
 				- "efficientnet_b0"
 
-		num_classes (int):
+		num_classes:
 			Number of output classes.
-			Default is 200 for CUB-200.
 
-		pretrained (bool):
-			Whether to use ImageNet pre-trained weights.
-			Default is True.
+		pretrained:
+			If True, load ImageNet-pretrained weights.
 
 	Returns:
-		nn.Module:
-			A PyTorch classification model configured for the
-			specified number of classes.
-
-	Raises:
-		ValueError:
-			If an unsupported model name is provided.
+		A PyTorch model configured for the specified
+		number of classes.
 	"""
 
-	# Convert the model name to lowercase so that inputs such as
-	# "ResNet18" and "RESNET18" are also accepted.
 	model_name = model_name.lower()
 
 	# ---------------------------------------------------------
@@ -77,10 +63,12 @@ def create_model(
 				weights = models.ResNet18_Weights.DEFAULT
 			)
 		else:
-			model = models.resnet18( weights = None )
+			model = models.resnet18(
+				weights = None
+			)
 
 		# Replace the original ImageNet classifier.
-		# ImageNet has 1000 classes, while CUB-200 has 200 classes.
+		# ImageNet has 1000 classes, while CUB-200 has 200.
 		model.fc = nn.Linear(
 			model.fc.in_features, num_classes
 		)
@@ -95,10 +83,11 @@ def create_model(
 				weights = models.ResNet50_Weights.DEFAULT
 			)
 		else:
-			model = models.resnet50( weights = None )
+			model = models.resnet50(
+				weights = None
+			)
 
-		# Replace the original ImageNet classifier with a
-		# classifier suitable for the 200 CUB-200 classes.
+		# Replace the original ImageNet classifier.
 		model.fc = nn.Linear(
 			model.fc.in_features, num_classes
 		)
@@ -113,17 +102,16 @@ def create_model(
 				weights = models.EfficientNet_B0_Weights.DEFAULT
 			)
 		else:
-			model = models.efficientnet_b0( weights = None )
+			model = models.efficientnet_b0(
+				weights = None
+			)
 
-		# EfficientNet stores its final classifier inside
-		# model.classifier.
+		# EfficientNet stores its classifier in model.classifier.
+		# Replace the final Linear layer with a 200-class layer.
 		model.classifier[1] = nn.Linear(
 			model.classifier[1].in_features, num_classes
 		)
 
-	# ---------------------------------------------------------
-	# Unsupported model
-	# ---------------------------------------------------------
 	else:
 		raise ValueError(
 			f"Unsupported model: '{model_name}'. "
@@ -136,30 +124,61 @@ def create_model(
 
 def freeze_backbone(model: nn.Module) -> None:
 	"""
-	Freeze all model parameters.
+	Freeze the feature-extraction backbone while keeping
+	the final classification layer trainable.
 
-	This is useful for the first stage of transfer learning,
-	where only the newly added classification layer is trained.
+	This is useful for the first stage of transfer learning.
+
+	ResNet:
+		- Freeze all parameters.
+		- Unfreeze model.fc.
+
+	EfficientNet:
+		- Freeze all parameters.
+		- Unfreeze model.classifier.
 
 	Args:
-		model (nn.Module):
-			PyTorch model whose parameters should be frozen.
+		model:
+			PyTorch model created by create_model().
 	"""
 
+	# First freeze every parameter in the model.
 	for parameter in model.parameters():
 		parameter.requires_grad = False
+
+	# ---------------------------------------------------------
+	# ResNet classifier
+	# ---------------------------------------------------------
+	if hasattr( model, "fc" ):
+
+		for parameter in model.fc.parameters():
+			parameter.requires_grad = True
+
+	# ---------------------------------------------------------
+	# EfficientNet classifier
+	# ---------------------------------------------------------
+	elif hasattr( model, "classifier" ):
+
+		for parameter in model.classifier.parameters():
+			parameter.requires_grad = True
+
+	else:
+		raise ValueError(
+			"Unable to identify the classifier layer "
+			"for this model."
+		)
 
 
 def unfreeze_model(model: nn.Module) -> None:
 	"""
 	Unfreeze all model parameters.
 
-	This can be used during fine-tuning after the classifier
-	has been trained.
+	This is used when performing full fine-tuning after
+	the initial transfer-learning stage.
 
 	Args:
-		model (nn.Module):
-			PyTorch model whose parameters should be trainable.
+		model:
+			PyTorch model.
 	"""
 
 	for parameter in model.parameters():
@@ -168,15 +187,16 @@ def unfreeze_model(model: nn.Module) -> None:
 
 def get_model_summary(model: nn.Module) -> dict:
 	"""
-	Return basic information about a model.
+	Calculate the total and trainable number of parameters.
 
 	Args:
-		model (nn.Module):
-			PyTorch model to inspect.
+		model:
+			PyTorch model.
 
 	Returns:
-		dict:
-			Dictionary containing total and trainable parameter counts.
+		Dictionary containing:
+			- total_parameters
+			- trainable_parameters
 	"""
 
 	total_parameters = sum(
@@ -193,8 +213,52 @@ def get_model_summary(model: nn.Module) -> dict:
 
 
 if __name__ == "__main__":
-	model = create_model( "resnet18" )
 
-	print( model )
-	print( "\nModel summary:" )
-	print( get_model_summary( model ) )
+	print( "=" * 60 )
+	print( "CUB-200 Model Test" )
+	print( "=" * 60 )
+
+	# ---------------------------------------------------------
+	# Test ResNet18
+	# ---------------------------------------------------------
+	print( "\nCreating ResNet18..." )
+
+	model = create_model(
+		"resnet18", num_classes = NUM_CLASSES, pretrained = True
+	)
+
+	print( "\nModel summary before freezing:" )
+
+	print(
+		get_model_summary( model )
+	)
+
+	# ---------------------------------------------------------
+	# Test freezing
+	# ---------------------------------------------------------
+	print( "\nFreezing ResNet18 backbone..." )
+
+	freeze_backbone( model )
+
+	print( "\nModel summary after freezing:" )
+
+	print(
+		get_model_summary( model )
+	)
+
+	# ---------------------------------------------------------
+	# Test unfreezing
+	# ---------------------------------------------------------
+	print( "\nUnfreezing ResNet18..." )
+
+	unfreeze_model( model )
+
+	print( "\nModel summary after unfreezing:" )
+
+	print(
+		get_model_summary( model )
+	)
+
+	print( "\n" + "=" * 60 )
+	print( "Model test completed successfully." )
+	print( "=" * 60 )
