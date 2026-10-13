@@ -1,4 +1,33 @@
+
+"""
+app.py
+
+COS30082 Assignment 1
+CUB-200 Bird Species Classification Web Application
+
+Features:
+1. Print PyTorch and CUDA environment information.
+2. Load the trained EfficientNet-B0 checkpoint.
+3. Load the mapping between class indices and bird species.
+4. Predict the top-5 bird species from an uploaded image.
+5. Run on either CPU or CUDA.
+"""
+
+import json
+from pathlib import Path
+
+import gradio as gr
 import torch
+import torch.nn as nn
+from PIL import Image
+from torchvision import models, transforms
+from huggingface_hub import HfApi, hf_hub_download
+
+
+# ============================================================
+# 1. Environment Version Check
+# Keep this section at the beginning, as requested.
+# ============================================================
 
 print("PyTorch version:", torch.__version__)
 print("CUDA available:", torch.cuda.is_available())
@@ -7,3 +36,406 @@ print("GPU count:", torch.cuda.device_count())
 
 if torch.cuda.is_available():
     print("GPU:", torch.cuda.get_device_name(0))
+
+
+# ============================================================
+# 2. Application Configuration
+# ============================================================
+
+# Hugging Face Model repository containing the trained weights
+MODEL_REPO_ID = (
+    "print1Username/COS30082-Assignment-1-efficientnet_b0"
+)
+
+# Expected class mapping filename.
+MAPPING_FILENAME = "class_mapping.json"
+
+NUM_CLASSES = 200
+IMAGE_SIZE = 224
+TOP_K = 5
+
+# Use CUDA if available; otherwise, use CPU.
+DEVICE = torch.device(
+    "cuda" if torch.cuda.is_available() else "cpu"
+)
+
+# The project root is the directory containing app.py.
+APP_DIR = Path(__file__).resolve().parent
+
+# Optional local checkpoint location.
+LOCAL_CHECKPOINT = (
+    APP_DIR / "models" / "checkpoints"
+    / "efficientnet_b0_best.pth"
+)
+
+# Image preprocessing must match the evaluation pipeline
+# used during training.
+IMAGE_TRANSFORM = transforms.Compose(
+    [
+        transforms.Resize(256),
+        transforms.CenterCrop(IMAGE_SIZE),
+        transforms.ToTensor(),
+        transforms.Normalize(
+            mean=[0.485, 0.456, 0.406],
+            std=[0.229, 0.224, 0.225],
+        ),
+    ]
+)
+
+
+# ============================================================
+# 3. Find and Download the Model Checkpoint
+# ============================================================
+
+def find_checkpoint_filename():
+    """
+    Find a suitable trained checkpoint in the Hugging Face
+    Model repository.
+
+    Preferred filenames are checked first. If the repository
+    contains several possible checkpoint files, prefer a file
+    whose name includes both 'efficientnet_b0' and 'best'.
+    """
+
+    api = HfApi()
+
+    repo_files = api.list_repo_files(
+        repo_id=MODEL_REPO_ID,
+        repo_type="model",
+    )
+
+    # Prefer the known best-checkpoint filename.
+    preferred_names = [
+        "efficientnet_b0_best.pth",
+        "efficientnet_b0_best.pt",
+        "best_model.pth",
+        "best_model.pt",
+        "checkpoint.pth",
+        "model.pth",
+    ]
+
+    for filename in preferred_names:
+        if filename in repo_files:
+            return filename
+
+    # Look for other PyTorch checkpoint filenames.
+    candidates = [
+        filename
+        for filename in repo_files
+        if filename.lower().endswith((".pth", ".pt", ".bin"))
+        and "/" not in filename
+    ]
+
+    best_candidates = [
+        filename
+        for filename in candidates
+        if "efficientnet_b0" in filename.lower()
+        and "best" in filename.lower()
+    ]
+
+    if len(best_candidates) == 1:
+        return best_candidates[0]
+
+    if len(candidates) == 1:
+        return candidates[0]
+
+    if not candidates:
+        raise FileNotFoundError(
+            "No PyTorch checkpoint was found in the Model "
+            f"repository: {MODEL_REPO_ID}. "
+            "Please upload your trained .pth or .pt file."
+        )
+
+    raise RuntimeError(
+        "Multiple possible checkpoint files were found: "
+        f"{candidates}. Please set the correct filename "
+        "explicitly in find_checkpoint_filename()."
+    )
+
+
+def get_checkpoint_path():
+    """
+    Use a local checkpoint if it exists.
+    Otherwise, download the checkpoint from Hugging Face.
+    """
+
+    if LOCAL_CHECKPOINT.is_file():
+        print(
+            "Loading local checkpoint:",
+            LOCAL_CHECKPOINT,
+        )
+        return str(LOCAL_CHECKPOINT)
+
+    checkpoint_filename = find_checkpoint_filename()
+
+    print(
+        "Downloading checkpoint:",
+        checkpoint_filename,
+    )
+
+    return hf_hub_download(
+        repo_id=MODEL_REPO_ID,
+        filename=checkpoint_filename,
+        repo_type="model",
+    )
+
+
+# ============================================================
+# 4. Load the Class Mapping
+# ============================================================
+
+def load_class_mapping():
+    """
+    Load class_mapping.json.
+
+    The expected format is a JSON dictionary such as:
+        {
+            "0": "Black footed Albatross",
+            "1": "Laysan Albatross"
+        }
+
+    The numeric keys must match the labels used during training.
+    """
+
+    # First, check whether the mapping is stored beside app.py.
+    local_mapping = APP_DIR / MAPPING_FILENAME
+
+    if local_mapping.is_file():
+        mapping_path = local_mapping
+    else:
+        # Otherwise, retrieve it from the Model repository.
+        mapping_path = Path(
+            hf_hub_download(
+                repo_id=MODEL_REPO_ID,
+                filename=MAPPING_FILENAME,
+                repo_type="model",
+            )
+        )
+
+    with open(
+        mapping_path,
+        "r",
+        encoding="utf-8",
+    ) as file:
+        raw_mapping = json.load(file)
+
+    # Convert JSON keys to integers for direct indexing.
+    mapping = {
+        int(class_index): str(species_name)
+        for class_index, species_name in raw_mapping.items()
+    }
+
+    expected_indices = set(range(NUM_CLASSES))
+
+    if set(mapping.keys()) != expected_indices:
+        raise ValueError(
+            "class_mapping.json must contain every class "
+            f"index from 0 to {NUM_CLASSES - 1}."
+        )
+
+    if any(not name.strip() for name in mapping.values()):
+        raise ValueError(
+            "class_mapping.json contains an empty species name."
+        )
+
+    print(
+        f"Loaded {len(mapping)} bird species from:",
+        mapping_path,
+    )
+
+    return mapping
+
+
+# ============================================================
+# 5. Build the EfficientNet-B0 Model
+# ============================================================
+
+def create_inference_model():
+    """
+    Recreate the same EfficientNet-B0 architecture used
+    for training, with a final layer containing 200 classes.
+
+    pretrained=False avoids downloading ImageNet weights:
+    the trained assignment checkpoint will supply the weights.
+    """
+
+    model = models.efficientnet_b0(weights=None)
+
+    # Match the final classifier layer used in src/models.py.
+    model.classifier[1] = nn.Linear(
+        model.classifier[1].in_features,
+        NUM_CLASSES,
+    )
+
+    checkpoint_path = get_checkpoint_path()
+
+    # The checkpoint may contain either a raw state dictionary
+    # or a training dictionary containing model_state_dict.
+    try:
+        checkpoint = torch.load(
+            checkpoint_path,
+            map_location="cpu",
+            weights_only=True,
+        )
+    except TypeError:
+        # Compatibility with older PyTorch versions.
+        checkpoint = torch.load(
+            checkpoint_path,
+            map_location="cpu",
+        )
+
+    if isinstance(checkpoint, dict):
+        if "model_state_dict" in checkpoint:
+            state_dict = checkpoint["model_state_dict"]
+        elif "state_dict" in checkpoint:
+            state_dict = checkpoint["state_dict"]
+        else:
+            state_dict = checkpoint
+    else:
+        raise ValueError(
+            "The checkpoint does not contain a valid "
+            "PyTorch state dictionary."
+        )
+
+    # Handle checkpoints saved from DataParallel models.
+    state_dict = {
+        key.removeprefix("module."): value
+        for key, value in state_dict.items()
+    }
+
+    # Strict loading catches architecture or weight mismatches.
+    model.load_state_dict(state_dict, strict=True)
+
+    model.to(DEVICE)
+    model.eval()
+
+    print("Model loaded successfully.")
+    print("Inference device:", DEVICE)
+
+    return model
+
+
+# ============================================================
+# 6. Initialise the Model and Species Names
+# ============================================================
+
+# Load once when the application starts, not for every image.
+CLASS_MAPPING = load_class_mapping()
+MODEL = create_inference_model()
+
+
+# ============================================================
+# 7. Predict the Top-5 Bird Species
+# ============================================================
+
+def predict_bird(image):
+    """
+    Accept an uploaded PIL image and return the top-5
+    predicted bird species with their confidence scores.
+
+    Gradio's Label component expects a dictionary mapping
+    class names to confidence scores.
+    """
+
+    if image is None:
+        return {}
+
+    # Ensure the uploaded image has three RGB channels.
+    image = image.convert("RGB")
+
+    # Convert the image into a normalised PyTorch tensor.
+    image_tensor = IMAGE_TRANSFORM(image).unsqueeze(0)
+    image_tensor = image_tensor.to(DEVICE)
+
+    # Disable gradient calculations for inference.
+    with torch.inference_mode():
+        logits = MODEL(image_tensor)
+
+        # Convert the 200 output logits into probabilities.
+        probabilities = torch.softmax(logits, dim=1)[0]
+
+        # Retrieve the top-5 predictions.
+        top_probabilities, top_indices = torch.topk(
+            probabilities,
+            k=TOP_K,
+        )
+
+    # Format the result for Gradio.
+    predictions = {}
+
+    for probability, class_index in zip(
+        top_probabilities.cpu().tolist(),
+        top_indices.cpu().tolist(),
+    ):
+        species_name = CLASS_MAPPING[class_index]
+
+        predictions[species_name] = float(probability)
+
+    return predictions
+
+
+# ============================================================
+# 8. Gradio Web Interface
+# ============================================================
+
+with gr.Blocks(
+    title="CUB-200 Bird Species Classifier",
+) as demo:
+
+    gr.Markdown(
+        """
+        # CUB-200 Bird Species Classifier
+
+        Upload a bird image to classify it into one of
+        the 200 bird species in the CUB-200 dataset.
+
+        The application uses a fine-tuned EfficientNet-B0
+        model developed for COS30082 Assignment 1.
+        """
+    )
+
+    with gr.Row():
+
+        with gr.Column():
+            input_image = gr.Image(
+                type="pil",
+                label="Upload a Bird Image",
+            )
+
+            predict_button = gr.Button(
+                "Classify Bird",
+                variant="primary",
+            )
+
+        with gr.Column():
+            output_label = gr.Label(
+                num_top_classes=TOP_K,
+                label="Top-5 Predictions",
+            )
+
+    predict_button.click(
+        fn=predict_bird,
+        inputs=input_image,
+        outputs=output_label,
+    )
+
+    gr.Markdown(
+        """
+        ---
+        **Model:** EfficientNet-B0
+
+        **Dataset:** CUB-200, 200 bird species
+
+        **Input size:** 224 × 224 pixels
+
+        **Inference device:** CPU or CUDA, depending on availability
+        """
+    )
+
+
+# ============================================================
+# 9. Launch the Application
+# ============================================================
+
+if __name__ == "__main__":
+    demo.launch()
