@@ -288,6 +288,12 @@ def evaluate( model_name: str ):
 	print( f"Results saved to: {result_path}" )
 	print( "=" * 70 )
 
+	if classes_evaluated != NUM_CLASSES:
+		raise ValueError(
+			f"Expected {NUM_CLASSES} classes, "
+			f"but found {classes_evaluated} in the test set."
+		)
+
 
 # ============================================================
 # Command-line interface

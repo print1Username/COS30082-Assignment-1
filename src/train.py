@@ -510,7 +510,7 @@ def train_model(model_name: str):
 		"train_loss": [], "train_accuracy": [], "validation_loss": [], "validation_accuracy": [], "learning_rate": [],
 	}
 
-	best_validation_accuracy = 0.0
+	best_validation_accuracy = -1.0
 
 	epochs_without_improvement = 0
 

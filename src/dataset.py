@@ -195,9 +195,8 @@ class CUB200Dataset( Dataset ):
 
 				if not 0 <= label < NUM_CLASSES:
 					raise ValueError(
-						f"Invalid label {label + 1} at "
-						f"line {line_number}. "
-						f"Expected labels from 1 to {NUM_CLASSES}."
+						f"Invalid label {label} at line {line_number}. "
+						f"Expected labels from 0 to {NUM_CLASSES - 1}."
 					)
 
 				full_image_path = (self.image_dir / image_path)
