@@ -59,7 +59,7 @@ NUM_CLASSES = 200
 
 BATCH_SIZE = 32
 
-MAX_EPOCHS = 30
+MAX_EPOCHS = 35
 
 # Number of epochs used to train only the classifier.
 WARMUP_EPOCHS = 5
@@ -70,12 +70,12 @@ CLASSIFIER_LR = 1e-3
 # Learning rate for full-model fine-tuning.
 FINETUNE_LR = 1e-4
 
-WEIGHT_DECAY = 1e-4
+WEIGHT_DECAY = 3e-4
 
 # Early stopping patience.
 # Training stops when validation accuracy does not improve
 # for this many consecutive epochs.
-EARLY_STOPPING_PATIENCE = 7
+EARLY_STOPPING_PATIENCE = 5
 
 VALIDATION_SIZE = 0.2
 
@@ -449,7 +449,7 @@ def train_model(model_name: str):
 	# Loss function
 	# --------------------------------------------------------
 
-	criterion = nn.CrossEntropyLoss()
+	criterion = nn.CrossEntropyLoss( label_smoothing = 0.1 )
 
 	# --------------------------------------------------------
 	# Stage 1:
