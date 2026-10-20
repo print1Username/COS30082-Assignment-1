@@ -17,9 +17,9 @@ from pathlib import Path
 
 import gradio as gr
 import torch
-import torch.nn as nn
-from torchvision import models, transforms
+from torchvision import transforms
 from huggingface_hub import HfApi, hf_hub_download
+from src.models import create_model
 
 # ============================================================
 # 1. Environment Version Check
@@ -42,7 +42,7 @@ print()
 # ============================================================
 
 # Hugging Face Model repository containing the trained weights
-MODEL_REPO_ID = ("print1Username/COS30082-Assignment-1-efficientnet_b0")
+MODEL_REPO_ID = ("print1Username/COS30082-Assignment-1-model")
 
 # Expected class mapping filename.
 MAPPING_FILENAME = "class_mapping.json"
@@ -60,7 +60,7 @@ DEVICE = torch.device(
 APP_DIR = Path( __file__ ).resolve().parent
 
 # Optional local checkpoint location.
-LOCAL_CHECKPOINT = (APP_DIR / "models" / "checkpoints" / "efficientnet_b0_best.pth")
+LOCAL_CHECKPOINT = (APP_DIR / "models" / "checkpoints" / "best_models.pth")
 
 # Image preprocessing must match the evaluation pipeline
 # used during training.
@@ -93,7 +93,7 @@ def find_checkpoint_filename():
 
 	# Prefer the known best-checkpoint filename.
 	preferred_names = [
-		"efficientnet_b0_best.pth", "efficientnet_b0_best.pt", "best_model.pth", "best_model.pt", "checkpoint.pth", "model.pth",
+		"efficientnet_b0_best.pth", "efficientnet_b0_best.pt", "best_model.pth", "best_model.pt", "checkpoint.pth", "model.pth", "models.pth", "best.pth",
 	]
 
 	for filename in preferred_names:
@@ -201,23 +201,16 @@ def load_class_mapping():
 
 
 # ============================================================
-# 5. Build the EfficientNet-B0 Model
+# 5. Build the Model Saved in the Checkpoint
 # ============================================================
 
 def create_inference_model():
 	"""
-	Recreate the same EfficientNet-B0 architecture used
-	for training, with a final layer containing 200 classes.
+	Recreate the architecture recorded in the training checkpoint,
+	then load its trained weights.
 
-	pretrained=False avoids downloading ImageNet weights:
-	the trained assignment checkpoint will supply the weights.
+	The model name must be one supported by src.models.create_model().
 	"""
-
-	model = models.efficientnet_b0( weights = None )
-
-	# Match the final classifier layer used in src/models.py.
-	model.classifier[1] = nn.Linear(
-		model.classifier[1].in_features, NUM_CLASSES, )
 
 	checkpoint_path = get_checkpoint_path()
 
@@ -244,6 +237,18 @@ def create_inference_model():
 			"PyTorch state dictionary."
 		)
 
+	model_name = checkpoint.get( "model_name" )
+
+	if not isinstance( model_name, str ):
+		raise ValueError(
+			"The checkpoint must contain a string 'model_name' "
+			"so the inference architecture can be recreated."
+		)
+
+	model = create_model(
+		model_name = model_name, num_classes = NUM_CLASSES,
+		pretrained = False, )
+
 	# Handle checkpoints saved from DataParallel models.
 	state_dict = { key.removeprefix( "module." ): value for key, value in state_dict.items() }
 
@@ -254,6 +259,7 @@ def create_inference_model():
 	model.eval()
 
 	print( "Model loaded successfully." )
+	print( "Model architecture:", model_name )
 	print( "Inference device:", DEVICE )
 
 	return model
@@ -336,7 +342,8 @@ with gr.Blocks(
 	with gr.Row():
 		with gr.Column():
 			input_image = gr.Image(
-				type = "pil", label = "Upload a Bird Image", )
+				type = "pil", sources = ["upload", "clipboard"],
+				label = "Upload a Bird Image", )
 
 			predict_button = gr.Button(
 				"Classify Bird", variant = "primary", )
