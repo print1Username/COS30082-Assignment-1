@@ -1,7 +1,5 @@
 torch
 torchvision
---extra-index-url https://download.pytorch.org/whl/cu132
-
 huggingface_hub
 scikit-learn
 pillow
