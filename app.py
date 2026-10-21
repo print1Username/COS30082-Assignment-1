@@ -22,6 +22,10 @@ from torchvision import transforms
 from huggingface_hub import HfApi, hf_hub_download
 from src.models import create_model
 
+
+torch.set_num_threads(1)
+torch.set_grad_enabled(False)
+
 # ============================================================
 # 1. Environment Version Check
 # Keep this section at the beginning, as requested.
