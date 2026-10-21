@@ -126,6 +126,8 @@ models/history/
 
 # Other
 *.pdf
+*.jpg
+*.png
 *.md
 !README.md
 !README.zh-CN.md
