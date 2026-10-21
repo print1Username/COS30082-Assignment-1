@@ -6,7 +6,7 @@
 [![简体中文](https://img.shields.io/badge/Language-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-red?style=for-the-badge)](README.zh-CN.md)
 </div>
 
-Image classification for 200 bird species using the Caltech-UCSD Birds 200 (CUB-200) dataset. The project compares ResNet18, ResNet50 and EfficientNet-B0 with transfer learning. **ResNet50 is the recommended final model.**
+Image classification for 200 bird species using the Caltech-UCSD Birds 200 (CUB-200) dataset. The project compares ResNet18, ResNet50 and EfficientNet-B0 with transfer learning. It includes local Python scripts, local Jupyter notebooks, and a separate Google Colab version. ResNet50 leads the recorded results below; the app automatically selects its model by validation accuracy.
 
 ## Links
 
@@ -14,6 +14,7 @@ Image classification for 200 bird species using the Caltech-UCSD Birds 200 (CUB-
 - Hugging Face profile: [print1Username](https://huggingface.co/print1Username)
 - Dataset: [CUB-200 dataset](https://huggingface.co/datasets/print1Username/COS30082-Assignment-1-dataset)
 - Model files: [trained model repository](https://huggingface.co/print1Username/COS30082-Assignment-1-model)
+- Data and Google Colab version: [shared Google Drive folder](https://drive.google.com/drive/folders/1vLkbNAVSo3dt7mVHacQpqIANziIXmqB_?usp=sharing)
 
 ## Results
 
@@ -24,6 +25,8 @@ Image classification for 200 bird species using the Caltech-UCSD Birds 200 (CUB-
 | **ResNet50** | **78.99%** | **76.91%** | **76.16%** |
 
 All results use 1,204 test images and 200 evaluated classes. See [model_result.md](model_result.md) for details.
+
+These are the existing results from before the overfitting fixes. A complete retraining and evaluation with the revised code has not been completed, so this table does not demonstrate the effect of the fixes. After retraining, compare validation performance and the final test metrics before updating the reported results.
 
 ## Quick start
 
@@ -84,9 +87,23 @@ python src/train.py --model efficientnet_b0
 
 Training uses a stratified 80/20 train-validation split, ImageNet-pretrained weights, data augmentation, two-stage fine-tuning, AdamW, label smoothing, learning-rate scheduling, early stopping and best-checkpoint saving. Checkpoints are written to `models/checkpoints/`; histories are written to `models/history/`.
 
-During the five warm-up epochs, the frozen backbone stays in evaluation mode so BatchNorm statistics do not change. Fine-tuning uses a backbone learning rate of `1e-5`, classifier rate of `1e-4`, and weight decay of `1e-3`. Scheduling and early stopping monitor validation loss (patience: 5); checkpoints retain the highest validation accuracy for model selection. The official test set is used only for final evaluation.
+The local Python and local notebook training implementations use the same overfitting controls:
 
-## Notebook version (standalone)
+| Setting | Revised behavior |
+|---|---|
+| Architectures | Keep ResNet18, ResNet50 and EfficientNet-B0 unchanged |
+| Data split | Stratified 80/20 split of the official training set; seed `42` |
+| Classifier warm-up | 5 epochs at learning rate `1e-3`; frozen backbone remains in evaluation mode so BatchNorm statistics do not change |
+| Fine-tuning | Backbone learning rate `1e-5`; classifier learning rate `1e-4` |
+| Regularization | AdamW weight decay `1e-3`, label smoothing `0.1`, and training-only image augmentation |
+| Learning-rate scheduling | Reduce the learning rate when validation loss stops improving |
+| Early stopping | Stop after 5 consecutive epochs without a lower validation loss; reset patience when fine-tuning starts |
+| Checkpoint selection | Save the checkpoint with the highest validation accuracy |
+| Training limit | Batch size `32`; maximum 35 epochs |
+
+Loss controls scheduling and stopping; accuracy selects the saved model. The official test set is used only for final evaluation, not for tuning or app model selection.
+
+## Local notebook version (standalone)
 
 The `notebooks/` folder contains a complete notebook workflow. The notebooks do not import the training implementation from `src/*.py`; each notebook contains the logic needed for its own stage:
 
@@ -98,15 +115,45 @@ Run them in numeric order. The original separate data-exploration notebook was m
 
 Notebook training and evaluation histories remain in memory and are displayed as charts and metrics. The notebooks save model checkpoints but do not write JSON files under `models/`; those JSON files belong to the local `src` workflow. The training notebook uses `num_workers=0` for Windows/Jupyter compatibility.
 
+After installing the project dependencies and downloading the data, install the notebook tools and start Jupyter from the `notebooks/` directory:
+
+```bash
+pip install notebook matplotlib numpy
+cd notebooks
+jupyter notebook
+```
+
+The notebooks resolve the project root as the parent of their working directory, so keep the kernel working directory at `notebooks/`. In `02_training.ipynb`, choose `MODEL` and uncomment `hist=train_model(MODEL)` to start training. In `03_evaluation.ipynb`, select the matching model name before evaluation. Notebook checkpoints use the same filenames as local Python checkpoints and can replace an existing checkpoint for that model.
+
+## Google Colab version
+
+The separate Google Colab version and the dataset are available in the [shared Google Drive folder](https://drive.google.com/drive/folders/1vLkbNAVSo3dt7mVHacQpqIANziIXmqB_?usp=sharing). Use that folder to access the cloud notebooks and their data; the local notebook files are in this repository's `notebooks/` directory. Follow the setup and data-path instructions in the Colab notebooks.
+
+The code changes documented here apply to the local Python scripts and local notebooks in this repository. The separate Google Drive/Colab copies have not been edited or verified as part of these fixes.
+
 ## Evaluate on the test set
 
 Evaluate a trained model after its checkpoint has been created:
 
 ```bash
 python src/evaluate.py --model resnet50
+python src/evaluate.py --model resnet18
+python src/evaluate.py --model efficientnet_b0
 ```
 
 Results are saved under `models/results/`. The required metrics are Top-1 accuracy and average accuracy per class.
+
+## Model output folders
+
+Normal local training and evaluation use only these folders under `models/`:
+
+| Folder | Contents | Written by |
+|---|---|---|
+| `models/checkpoints/` | `<model>_best.pth`: weights, architecture, validation accuracy, optimizer/scheduler states, and training configuration for newly trained checkpoints | Local Python training or the local training notebook |
+| `models/history/` | `<model>_history.json`: epoch loss, accuracy, and learning-rate history, updated after each completed epoch | `src/train.py` only |
+| `models/results/` | `<model>_test_results.json`: final test Top-1 and average per-class accuracy | `src/evaluate.py` only |
+
+The code does not automatically create `baseline`, `interrupted_trial`, or `retraining` folders. Running training or evaluation again for the same model can overwrite its existing files; automatic backup folders are not created.
 
 ## Run the local web application
 
@@ -132,8 +179,15 @@ At startup, `app.py` compares the `validation_accuracy` stored inside available 
 │   ├── models.py          # Model definitions
 │   ├── train.py           # Training and checkpoint saving
 │   └── evaluate.py        # Test-set evaluation
+├── notebooks/            # Local standalone Jupyter workflow
+│   ├── 01_data_preparation.ipynb
+│   ├── 02_training.ipynb
+│   └── 03_evaluation.ipynb
 ├── data/                  # Local dataset files
-└── models/                # Local checkpoints, histories and results
+└── models/
+    ├── checkpoints/       # Model checkpoints
+    ├── history/           # Local src training-history JSON
+    └── results/           # Local src test-result JSON
 ```
 
 ## Assignment metrics

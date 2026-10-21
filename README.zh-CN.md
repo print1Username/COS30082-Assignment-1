@@ -3,7 +3,7 @@
 [![English](https://img.shields.io/badge/Language-English-blue?style=for-the-badge)](README.md)
 [![简体中文](https://img.shields.io/badge/Language-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-red?style=for-the-badge)](README.zh-CN.md)
 
-使用 Caltech-UCSD Birds 200（CUB-200）数据集，对 200 种鸟类进行图像分类。项目比较 ResNet18、ResNet50 和 EfficientNet-B0 的迁移学习效果。**最终推荐模型为 ResNet50。**
+使用 Caltech-UCSD Birds 200（CUB-200）数据集，对 200 种鸟类进行图像分类。项目比较 ResNet18、ResNet50 和 EfficientNet-B0 的迁移学习效果，提供本地 Python、本地 Jupyter notebook 和独立的 Google Colab 版本。ResNet50 在下方已有结果中领先；网页应用会根据验证准确率自动选择模型。
 
 ## 项目链接
 
@@ -11,6 +11,7 @@
 - Hugging Face 主页：[print1Username](https://huggingface.co/print1Username)
 - 数据集：[CUB-200 dataset](https://huggingface.co/datasets/print1Username/COS30082-Assignment-1-dataset)
 - 模型文件：[训练模型仓库](https://huggingface.co/print1Username/COS30082-Assignment-1-model)
+- 数据和 Google Colab 版本：[Google Drive 共享文件夹](https://drive.google.com/drive/folders/1vLkbNAVSo3dt7mVHacQpqIANziIXmqB_?usp=sharing)
 
 ## 训练结果
 
@@ -21,6 +22,8 @@
 | **ResNet50** | **78.99%** | **76.91%** | **76.16%** |
 
 所有结果均基于 1,204 张测试图像和 200 个评估类别。详细结果请查看 [model_result.md](model_result.md)。
+
+以上是过拟合修复前的已有结果。修改后的代码尚未完成完整重训和评估，因此此表不能证明本次修复的效果。重新训练后，应比较验证表现和最终测试指标，再更新报告中的结果。
 
 ## 快速开始
 
@@ -81,9 +84,23 @@ python src/train.py --model efficientnet_b0
 
 训练流程使用分层 80/20 训练-验证划分、ImageNet 预训练权重、数据增强、两阶段微调、AdamW、标签平滑、学习率调度、early stopping 和最佳 checkpoint 保存。模型权重保存在 `models/checkpoints/`，训练历史保存在 `models/history/`。
 
-前 5 轮只训练分类层，冻结部分保持评估模式，防止 BatchNorm 统计量继续变化。随后微调时，预训练部分的学习率为 `1e-5`，分类层为 `1e-4`，权重衰减为 `1e-3`。学习率调度和早停监控验证 loss，连续 5 轮不改善就停止；checkpoint 仍按最高验证准确率保存，用于选择模型。测试集只用于最终评估。
+本地 Python 和本地 notebook 的训练实现采用相同的过拟合控制措施：
 
-## Notebook 版本（独立运行）
+| 设置 | 修正后的行为 |
+|---|---|
+| 模型架构 | 保留 ResNet18、ResNet50 和 EfficientNet-B0，不更换架构 |
+| 数据划分 | 从官方训练集进行分层 80/20 划分，随机种子为 `42` |
+| 分类层预热 | 前 5 轮只训练分类层，学习率为 `1e-3`；冻结部分保持评估模式，防止 BatchNorm 统计量变化 |
+| 微调学习率 | 预训练部分为 `1e-5`，分类层为 `1e-4` |
+| 训练约束 | AdamW 权重衰减为 `1e-3`，标签平滑为 `0.1`，数据增强仅用于训练图片 |
+| 学习率调度 | 验证 loss 不再改善时降低学习率 |
+| 提前停止 | 连续 5 轮验证 loss 没有下降就停止；开始微调时重新计算等待轮数 |
+| 最佳权重选择 | 按最高验证准确率保存 checkpoint |
+| 训练上限 | Batch size 为 `32`，最多训练 35 轮 |
+
+验证 loss 决定何时降低学习率和停止训练，验证准确率决定保存哪个模型。测试集只用于最终评估，不用于调参或网页应用的模型选择。
+
+## 本地 Notebook 版本（独立运行）
 
 `notebooks/` 目录包含完整的 notebook 工作流程。Notebook 不会导入 `src/*.py` 中的训练实现，每个 notebook 都包含自己阶段所需的代码：
 
@@ -95,15 +112,45 @@ python src/train.py --model efficientnet_b0
 
 Notebook 的训练历史和评估结果保留在内存中，通过图表和指标展示。Notebook 会保存模型权重，但不写入 `models/` 中的 JSON；这些 JSON 只由本地 `src` 流程保存。训练 notebook 使用 `num_workers=0`，兼容 Windows/Jupyter。
 
+安装项目依赖、下载数据后，安装 notebook 工具，并从 `notebooks/` 目录启动 Jupyter：
+
+```bash
+pip install notebook matplotlib numpy
+cd notebooks
+jupyter notebook
+```
+
+Notebook 将工作目录的上一级作为项目根目录，因此请保持内核工作目录为 `notebooks/`。在 `02_training.ipynb` 中选择 `MODEL`，取消 `hist=train_model(MODEL)` 的注释即可开始训练；在 `03_evaluation.ipynb` 中选择对应模型后再评估。Notebook 与本地 Python 使用相同的 checkpoint 文件名，因此可能覆盖同名模型的已有权重。
+
+## Google Colab 版本
+
+独立的 Google Colab 版本和数据集统一放在 [Google Drive 共享文件夹](https://drive.google.com/drive/folders/1vLkbNAVSo3dt7mVHacQpqIANziIXmqB_?usp=sharing)。通过该文件夹访问云端 notebook 和所需数据；本地 notebook 则位于此仓库的 `notebooks/` 目录。Colab 的环境准备和数据路径设置请按对应云端 notebook 内的说明操作。
+
+本 README 记录的代码修正已应用于此仓库的本地 Python 和本地 notebook；本次没有修改或验证 Google Drive 中独立的 Colab 副本。
+
 ## 测试集评估
 
 模型训练并生成 checkpoint 后，再运行评估：
 
 ```bash
 python src/evaluate.py --model resnet50
+python src/evaluate.py --model resnet18
+python src/evaluate.py --model efficientnet_b0
 ```
 
 结果保存在 `models/results/`。作业要求的指标为 Top-1 accuracy 和 Average Accuracy per Class。
+
+## 模型输出文件夹
+
+正常运行本地训练和评估时，`models/` 只使用以下三个文件夹：
+
+| 文件夹 | 内容 | 写入来源 |
+|---|---|---|
+| `models/checkpoints/` | `<model>_best.pth`：模型权重、架构、验证准确率、优化器和调度器状态；新训练的 checkpoint 还记录训练配置 | 本地 Python 训练或本地训练 notebook |
+| `models/history/` | `<model>_history.json`：每轮 loss、准确率和学习率，完成每轮训练后更新 | 仅 `src/train.py` |
+| `models/results/` | `<model>_test_results.json`：最终测试 Top-1 和每类平均准确率 | 仅 `src/evaluate.py` |
+
+代码不会自动创建 `baseline`、`interrupted_trial` 或 `retraining` 文件夹。同一模型再次训练或评估时，可能覆盖它原有的对应文件；程序不会自动创建备份文件夹。
 
 ## 本地运行网页端
 
@@ -129,8 +176,15 @@ python app.py
 │   ├── models.py          # 模型定义
 │   ├── train.py           # 模型训练与 checkpoint 保存
 │   └── evaluate.py        # 测试集评估
+├── notebooks/            # 本地独立 Jupyter 工作流程
+│   ├── 01_data_preparation.ipynb
+│   ├── 02_training.ipynb
+│   └── 03_evaluation.ipynb
 ├── data/                  # 本地数据集文件
-└── models/                # checkpoint、训练历史和评估结果
+└── models/
+    ├── checkpoints/       # 模型权重
+    ├── history/           # 仅本地 src 的训练历史 JSON
+    └── results/           # 仅本地 src 的测试结果 JSON
 ```
 
 ## 作业评估指标
