@@ -144,8 +144,7 @@ def get_device() -> torch.device:
 # Training
 # ============================================================
 
-def train_one_epoch(
-	model, data_loader, criterion, optimizer, device, scaler, ):
+def train_one_epoch(model, data_loader, criterion, optimizer, device, scaler, ):
 	"""
 	Train the model for one epoch.
 
@@ -245,8 +244,7 @@ def train_one_epoch(
 # Validation
 # ============================================================
 
-def validate(
-	model, data_loader, criterion, device, ):
+def validate(model, data_loader, criterion, device, ):
 	"""
 	Evaluate the model on the validation set.
 
@@ -332,8 +330,7 @@ def validate(
 # Checkpoint
 # ============================================================
 
-def save_checkpoint(
-	model, optimizer, scheduler, epoch, validation_accuracy, model_name, checkpoint_path, ):
+def save_checkpoint(model, optimizer, scheduler, epoch, validation_accuracy, model_name, checkpoint_path, ):
 	"""
 	Save the best model checkpoint.
 

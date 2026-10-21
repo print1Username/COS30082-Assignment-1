@@ -372,8 +372,7 @@ def download_file(filename: str) -> Path:
 # Extraction function
 # ============================================================
 
-def extract_zip(
-	zip_path: Path, output_dir: Path, ) -> None:
+def extract_zip(zip_path: Path, output_dir: Path, ) -> None:
 	"""
 	Extract a ZIP file.
 

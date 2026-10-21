@@ -61,7 +61,7 @@ def get_device() -> torch.device:
 # Model loading
 # ============================================================
 
-def load_best_model( model_name: str, device: torch.device ):
+def load_best_model(model_name: str, device: torch.device):
 	"""
 	Load the best checkpoint saved by train.py.
 
@@ -99,7 +99,7 @@ def load_best_model( model_name: str, device: torch.device ):
 	)
 
 	model.load_state_dict(
-		checkpoint[ "model_state_dict" ]
+		checkpoint["model_state_dict"]
 	)
 
 	model = model.to( device )
@@ -114,7 +114,7 @@ def load_best_model( model_name: str, device: torch.device ):
 # ============================================================
 
 @torch.no_grad()
-def evaluate_model( model, data_loader, device: torch.device ):
+def evaluate_model(model, data_loader, device: torch.device):
 	"""
 	Compute Top-1 accuracy and average per-class accuracy.
 
@@ -172,7 +172,7 @@ def evaluate_model( model, data_loader, device: torch.device ):
 		correct_mask = (predictions == labels)
 
 		correct_per_class += torch.bincount(
-			labels[ correct_mask ], minlength = NUM_CLASSES
+			labels[correct_mask], minlength = NUM_CLASSES
 		)
 
 	# --------------------------------------------------------
@@ -181,9 +181,7 @@ def evaluate_model( model, data_loader, device: torch.device ):
 
 	total_images = total_per_class.sum().item()
 
-	top1_accuracy = (
-		correct_per_class.sum().item() / total_images
-	)
+	top1_accuracy = (correct_per_class.sum().item() / total_images)
 
 	# --------------------------------------------------------
 	# Average per-class accuracy.
@@ -193,14 +191,9 @@ def evaluate_model( model, data_loader, device: torch.device ):
 
 	present_classes = total_per_class > 0
 
-	per_class_accuracy = (
-		correct_per_class[ present_classes ].float()
-		/ total_per_class[ present_classes ].float()
-	)
+	per_class_accuracy = (correct_per_class[present_classes].float() / total_per_class[present_classes].float())
 
-	average_per_class_accuracy = (
-		per_class_accuracy.mean().item()
-	)
+	average_per_class_accuracy = (per_class_accuracy.mean().item())
 
 	classes_evaluated = int( present_classes.sum().item() )
 
@@ -211,7 +204,7 @@ def evaluate_model( model, data_loader, device: torch.device ):
 # Save results
 # ============================================================
 
-def save_results( results: dict, model_name: str ) -> Path:
+def save_results(results: dict, model_name: str) -> Path:
 	"""
 	Save the test results as a JSON file.
 	"""
@@ -224,7 +217,6 @@ def save_results( results: dict, model_name: str ) -> Path:
 
 	with open(
 		result_path, "w", encoding = "utf-8", ) as file:
-
 		json.dump(
 			results, file, indent = 4
 		)
@@ -236,7 +228,7 @@ def save_results( results: dict, model_name: str ) -> Path:
 # Main
 # ============================================================
 
-def evaluate( model_name: str ):
+def evaluate(model_name: str):
 	"""
 	Evaluate one trained model on the official test set.
 	"""
@@ -274,14 +266,16 @@ def evaluate( model_name: str ):
 		)
 
 	results = {
-		"model_name": model_name, "best_validation_accuracy": checkpoint[ "validation_accuracy" ], "test_top1_accuracy": top1_accuracy, "test_average_per_class_accuracy": average_per_class_accuracy, "test_samples": len( test_loader.dataset ), "classes_evaluated": classes_evaluated, }
+		"model_name": model_name, "best_validation_accuracy": checkpoint["validation_accuracy"], "test_top1_accuracy": top1_accuracy, "test_average_per_class_accuracy": average_per_class_accuracy, "test_samples": len( test_loader.dataset ),
+		"classes_evaluated": classes_evaluated,
+	}
 
 	result_path = save_results(
 		results, model_name
 	)
 
 	print( "\n" + "-" * 70 )
-	print( f"Validation accuracy (best): {results[ 'best_validation_accuracy' ] * 100:.2f}%" )
+	print( f"Validation accuracy (best): {results['best_validation_accuracy'] * 100:.2f}%" )
 	print( f"Test Top-1 accuracy:        {top1_accuracy * 100:.2f}%" )
 	print( f"Test avg per-class acc:     {average_per_class_accuracy * 100:.2f}%" )
 	print( "-" * 70 )

@@ -27,8 +27,7 @@ from torchvision import models
 NUM_CLASSES = 200
 
 
-def create_model(
-	model_name: str, num_classes: int = NUM_CLASSES, pretrained: bool = True, ):
+def create_model(model_name: str, num_classes: int = NUM_CLASSES, pretrained: bool = True, ):
 	"""
 	Create a CNN model for CUB-200 classification.
 

@@ -22,10 +22,6 @@ from torchvision import transforms
 from huggingface_hub import HfApi, hf_hub_download
 from src.models import create_model
 
-
-torch.set_num_threads(1)
-torch.set_grad_enabled(False)
-
 # ============================================================
 # 1. Environment Version Check
 # Keep this section at the beginning, as requested.
@@ -251,8 +247,7 @@ def create_inference_model():
 		)
 
 	model = create_model(
-		model_name = model_name, num_classes = NUM_CLASSES,
-		pretrained = False, )
+		model_name = model_name, num_classes = NUM_CLASSES, pretrained = False, )
 
 	# Handle checkpoints saved from DataParallel models.
 	state_dict = { key.removeprefix( "module." ): value for key, value in state_dict.items() }
@@ -347,8 +342,7 @@ with gr.Blocks(
 	with gr.Row():
 		with gr.Column():
 			input_image = gr.Image(
-				type = "pil", sources = ["upload", "clipboard"],
-				label = "Upload a Bird Image", )
+				type = "pil", sources = ["upload", "clipboard"], label = "Upload a Bird Image", )
 
 			predict_button = gr.Button(
 				"Classify Bird", variant = "primary", )
@@ -378,7 +372,5 @@ with gr.Blocks(
 # ============================================================
 
 if __name__ == "__main__":
-    demo.launch(
-        server_name = "0.0.0.0",
-        server_port = int( os.environ.get( "PORT", 7860 ) ),
-    )
+	demo.launch(
+		server_name = "0.0.0.0", server_port = int( os.environ.get( "PORT", 7860 ) ), )

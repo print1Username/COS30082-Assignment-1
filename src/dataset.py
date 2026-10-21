@@ -125,8 +125,7 @@ class CUB200Dataset( Dataset ):
 		Black_Footed_Albatross_0001_796111.jpg 1
 	"""
 
-	def __init__(
-		self, image_dir, annotation_file, transform = None
+	def __init__(self, image_dir, annotation_file, transform = None
 	):
 		"""
 		Parameters
@@ -245,8 +244,7 @@ class CUB200Dataset( Dataset ):
 # Dataset Splitting
 # ============================================================
 
-def create_train_validation_split(
-	dataset, validation_size = 0.2, random_state = 42
+def create_train_validation_split(dataset, validation_size = 0.2, random_state = 42
 ):
 	"""
 	Split the training dataset into training and validation sets.
@@ -289,8 +287,7 @@ def create_train_validation_split(
 # DataLoaders
 # ============================================================
 
-def create_dataloaders(
-	data_dir = "data", batch_size = 32, validation_size = 0.2, num_workers = 2, random_state = 42
+def create_dataloaders(data_dir = "data", batch_size = 32, validation_size = 0.2, num_workers = 2, random_state = 42
 ):
 	"""
 	Create training, validation, and test DataLoaders.
