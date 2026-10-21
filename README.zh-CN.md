@@ -81,6 +81,16 @@ python src/train.py --model efficientnet_b0
 
 训练流程使用分层 80/20 训练-验证划分、ImageNet 预训练权重、数据增强、两阶段微调、AdamW、标签平滑、学习率调度、early stopping 和最佳 checkpoint 保存。模型权重保存在 `models/checkpoints/`，训练历史保存在 `models/history/`。
 
+## Notebook 版本（独立运行）
+
+`notebooks/` 目录包含完整的 notebook 工作流程。Notebook 不会导入 `src/*.py` 中的训练实现，每个 notebook 都包含自己阶段所需的代码：
+
+1. `notebooks/01_data_preparation.ipynb`：合并后的数据探索与准备 notebook，检查路径、标注、类别、缺失/损坏图片、图片尺寸、类别分布、PyTorch `Dataset`/`DataLoader` 和数据增强，并包含数据摘要图表。
+2. `notebooks/02_training.ipynb`：完整训练流程（train/validation/fine-tune/checkpoint/history），包含 loss、accuracy、学习率和训练状态图表。
+3. `notebooks/03_evaluation.ipynb`：测试集评估（Top-1 与每类平均准确率），并包含每类性能图表。
+
+请按照数字顺序执行。原本独立的数据探索 notebook 已合并到 `01_data_preparation.ipynb`，避免功能重复。
+
 ## 测试集评估
 
 模型训练并生成 checkpoint 后，再运行评估：

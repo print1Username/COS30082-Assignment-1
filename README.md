@@ -84,6 +84,16 @@ python src/train.py --model efficientnet_b0
 
 Training uses a stratified 80/20 train-validation split, ImageNet-pretrained weights, data augmentation, two-stage fine-tuning, AdamW, label smoothing, learning-rate scheduling, early stopping and best-checkpoint saving. Checkpoints are written to `models/checkpoints/`; histories are written to `models/history/`.
 
+## Notebook version (standalone)
+
+The `notebooks/` folder contains a complete notebook workflow. The notebooks do not import the training implementation from `src/*.py`; each notebook contains the logic needed for its own stage:
+
+1. `notebooks/01_data_preparation.ipynb`: combined data exploration and preparation. It checks paths, annotations, classes, missing/corrupted images, image sizes, class distributions, PyTorch `Dataset`/`DataLoader`, and augmentation. It also includes summary charts.
+2. `notebooks/02_training.ipynb`: full training pipeline (train/validation/fine-tune/checkpoint/history) with loss, accuracy, learning-rate, and training-status charts.
+3. `notebooks/03_evaluation.ipynb`: test evaluation with Top-1 accuracy and average accuracy per class, plus per-class performance charts.
+
+Run them in numeric order. The original separate data-exploration notebook was merged into `01_data_preparation.ipynb` to avoid duplicated functionality.
+
 ## Evaluate on the test set
 
 Evaluate a trained model after its checkpoint has been created:
