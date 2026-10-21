@@ -1,8 +1,7 @@
 # CUB-200 鸟类物种分类
 
-<p align="center">
-  <strong>中文</strong> · <a href="README.md">English</a>
-</p>
+[![English](https://img.shields.io/badge/Language-English-blue?style=for-the-badge)](README.md)
+[![简体中文](https://img.shields.io/badge/Language-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-red?style=for-the-badge)](README.zh-CN.md)
 
 使用 Caltech-UCSD Birds 200（CUB-200）数据集，对 200 种鸟类进行图像分类。项目比较 ResNet18、ResNet50 和 EfficientNet-B0 的迁移学习效果。**最终推荐模型为 ResNet50。**
 
