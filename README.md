@@ -84,6 +84,8 @@ python src/train.py --model efficientnet_b0
 
 Training uses a stratified 80/20 train-validation split, ImageNet-pretrained weights, data augmentation, two-stage fine-tuning, AdamW, label smoothing, learning-rate scheduling, early stopping and best-checkpoint saving. Checkpoints are written to `models/checkpoints/`; histories are written to `models/history/`.
 
+During the five warm-up epochs, the frozen backbone stays in evaluation mode so BatchNorm statistics do not change. Fine-tuning uses a backbone learning rate of `1e-5`, classifier rate of `1e-4`, and weight decay of `1e-3`. Scheduling and early stopping monitor validation loss (patience: 5); checkpoints retain the highest validation accuracy for model selection. The official test set is used only for final evaluation.
+
 ## Notebook version (standalone)
 
 The `notebooks/` folder contains a complete notebook workflow. The notebooks do not import the training implementation from `src/*.py`; each notebook contains the logic needed for its own stage:
@@ -93,6 +95,8 @@ The `notebooks/` folder contains a complete notebook workflow. The notebooks do 
 3. `notebooks/03_evaluation.ipynb`: test evaluation with Top-1 accuracy and average accuracy per class, plus per-class performance charts.
 
 Run them in numeric order. The original separate data-exploration notebook was merged into `01_data_preparation.ipynb` to avoid duplicated functionality.
+
+Notebook training and evaluation histories remain in memory and are displayed as charts and metrics. The notebooks save model checkpoints but do not write JSON files under `models/`; those JSON files belong to the local `src` workflow. The training notebook uses `num_workers=0` for Windows/Jupyter compatibility.
 
 ## Evaluate on the test set
 
@@ -114,7 +118,7 @@ python app.py
 
 Open the local URL shown in the terminal, usually `http://localhost:7860`. The app accepts an image upload and returns the top-5 bird-species predictions. It uses a local checkpoint when available; otherwise it downloads a checkpoint and `class_mapping.json` from the [Hugging Face model repository](https://huggingface.co/print1Username/COS30082-Assignment-1-model).
 
-The current `app.py` inference configuration is based on EfficientNet-B0. ResNet50 is the best model according to the final evaluation table above; deploying ResNet50 in the app requires the app checkpoint/architecture configuration and the uploaded model file to match.
+At startup, `app.py` compares the `validation_accuracy` stored inside available local checkpoints and automatically loads the highest-scoring model. If no local checkpoints exist, it downloads and compares the repository's root-level checkpoint files instead. Each checkpoint must include `model_name` and `validation_accuracy`; no history or test-result JSON is used for selection. The interface displays the actual architecture and validation accuracy. Restart the app after retraining to refresh its selection.
 
 ## Project structure
 

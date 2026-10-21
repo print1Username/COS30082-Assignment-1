@@ -81,6 +81,8 @@ python src/train.py --model efficientnet_b0
 
 训练流程使用分层 80/20 训练-验证划分、ImageNet 预训练权重、数据增强、两阶段微调、AdamW、标签平滑、学习率调度、early stopping 和最佳 checkpoint 保存。模型权重保存在 `models/checkpoints/`，训练历史保存在 `models/history/`。
 
+前 5 轮只训练分类层，冻结部分保持评估模式，防止 BatchNorm 统计量继续变化。随后微调时，预训练部分的学习率为 `1e-5`，分类层为 `1e-4`，权重衰减为 `1e-3`。学习率调度和早停监控验证 loss，连续 5 轮不改善就停止；checkpoint 仍按最高验证准确率保存，用于选择模型。测试集只用于最终评估。
+
 ## Notebook 版本（独立运行）
 
 `notebooks/` 目录包含完整的 notebook 工作流程。Notebook 不会导入 `src/*.py` 中的训练实现，每个 notebook 都包含自己阶段所需的代码：
@@ -90,6 +92,8 @@ python src/train.py --model efficientnet_b0
 3. `notebooks/03_evaluation.ipynb`：测试集评估（Top-1 与每类平均准确率），并包含每类性能图表。
 
 请按照数字顺序执行。原本独立的数据探索 notebook 已合并到 `01_data_preparation.ipynb`，避免功能重复。
+
+Notebook 的训练历史和评估结果保留在内存中，通过图表和指标展示。Notebook 会保存模型权重，但不写入 `models/` 中的 JSON；这些 JSON 只由本地 `src` 流程保存。训练 notebook 使用 `num_workers=0`，兼容 Windows/Jupyter。
 
 ## 测试集评估
 
@@ -111,7 +115,7 @@ python app.py
 
 打开终端显示的本地地址，通常是 `http://localhost:7860`。网页端支持上传图片，并返回 Top-5 鸟类预测结果。如果本地存在 checkpoint，程序会优先使用本地文件；否则会从 [Hugging Face 模型仓库](https://huggingface.co/print1Username/COS30082-Assignment-1-model) 下载 checkpoint 和 `class_mapping.json`。
 
-当前 `app.py` 的推理配置使用 EfficientNet-B0。最终评估表现最好的模型是 ResNet50；如果要在网页端部署 ResNet50，必须同步修改网页端的模型架构配置，并确保上传的模型文件与架构一致。
+`app.py` 启动时会比较本地 checkpoint 内保存的 `validation_accuracy`，自动加载验证准确率最高的模型。没有本地权重时，才下载并比较 Hugging Face 仓库根目录中的 checkpoint。每份 checkpoint 必须包含 `model_name` 和 `validation_accuracy`；选择过程不读取训练历史或测试结果 JSON。页面显示实际使用的模型名称和验证准确率。重新训练后，需要重启 App 才会重新选择模型。
 
 ## 项目结构
 

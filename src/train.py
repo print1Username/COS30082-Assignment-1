@@ -68,12 +68,15 @@ WARMUP_EPOCHS = 5
 CLASSIFIER_LR = 1e-3
 
 # Learning rate for full-model fine-tuning.
-FINETUNE_LR = 1e-4
+FINETUNE_LR = 1e-5
 
-WEIGHT_DECAY = 3e-4
+# The new classifier can learn faster than the pretrained backbone.
+FINETUNE_CLASSIFIER_LR = 1e-4
+
+WEIGHT_DECAY = 1e-3
 
 # Early stopping patience.
-# Training stops when validation accuracy does not improve
+# Training stops when validation loss does not improve
 # for this many consecutive epochs.
 EARLY_STOPPING_PATIENCE = 5
 
@@ -175,6 +178,12 @@ def train_one_epoch(model, data_loader, criterion, optimizer, device, scaler, ):
 	"""
 
 	model.train()
+	# requires_grad=False freezes weights, but not BatchNorm running statistics.
+	# Keep the entire frozen backbone in evaluation mode during classifier warm-up.
+	if not next( model.parameters() ).requires_grad:
+		model.eval()
+		classifier = model.fc if hasattr( model, "fc" ) else model.classifier
+		classifier.train()
 
 	running_loss = 0.0
 	correct = 0
@@ -330,7 +339,7 @@ def validate(model, data_loader, criterion, device, ):
 # Checkpoint
 # ============================================================
 
-def save_checkpoint(model, optimizer, scheduler, epoch, validation_accuracy, model_name, checkpoint_path, ):
+def save_checkpoint(model, optimizer, scheduler, epoch, validation_accuracy, model_name, checkpoint_path, validation_loss, ):
 	"""
 	Save the best model checkpoint.
 
@@ -363,10 +372,22 @@ def save_checkpoint(model, optimizer, scheduler, epoch, validation_accuracy, mod
 
 		checkpoint_path:
 			Output checkpoint path.
+
+		validation_loss:
+			Validation loss at the saved epoch.
 	"""
 
 	checkpoint = {
 		"epoch": epoch, "model_name": model_name, "validation_accuracy": validation_accuracy, "model_state_dict": model.state_dict(), "optimizer_state_dict": optimizer.state_dict(), "scheduler_state_dict": scheduler.state_dict(),
+		"validation_loss": validation_loss,
+		"training_config": {
+			"classifier_lr": CLASSIFIER_LR, "backbone_lr": FINETUNE_LR,
+			"finetune_classifier_lr": FINETUNE_CLASSIFIER_LR, "weight_decay": WEIGHT_DECAY,
+			"label_smoothing": 0.1, "warmup_epochs": WARMUP_EPOCHS,
+			"max_epochs": MAX_EPOCHS, "batch_size": BATCH_SIZE,
+			"validation_size": VALIDATION_SIZE, "seed": RANDOM_SEED,
+			"early_stopping_metric": "validation_loss", "patience": EARLY_STOPPING_PATIENCE,
+		},
 	}
 
 	torch.save(
@@ -473,7 +494,7 @@ def train_model(model_name: str):
 		), lr = CLASSIFIER_LR, weight_decay = WEIGHT_DECAY, )
 
 	scheduler = ReduceLROnPlateau(
-		optimizer, mode = "max", factor = 0.5, patience = 2, )
+		optimizer, mode = "min", factor = 0.5, patience = 2, )
 
 	# --------------------------------------------------------
 	# Mixed precision scaler
@@ -505,9 +526,11 @@ def train_model(model_name: str):
 
 	history = {
 		"train_loss": [], "train_accuracy": [], "validation_loss": [], "validation_accuracy": [], "learning_rate": [],
+		"classifier_learning_rate": [],
 	}
 
 	best_validation_accuracy = -1.0
+	best_validation_loss = float( "inf" )
 
 	epochs_without_improvement = 0
 
@@ -537,12 +560,20 @@ def train_model(model_name: str):
 				get_model_summary( model )
 			)
 
-			# Re-create optimizer using a smaller learning rate.
+			# Protect pretrained features with a lower backbone learning rate.
+			classifier = model.fc if hasattr( model, "fc" ) else model.classifier
+			classifier_ids = { id( parameter ) for parameter in classifier.parameters() }
 			optimizer = AdamW(
-				model.parameters(), lr = FINETUNE_LR, weight_decay = WEIGHT_DECAY, )
+				[
+					{ "params": [p for p in model.parameters() if id( p ) not in classifier_ids], "lr": FINETUNE_LR },
+					{ "params": classifier.parameters(), "lr": FINETUNE_CLASSIFIER_LR },
+				], weight_decay = WEIGHT_DECAY, )
 
 			scheduler = ReduceLROnPlateau(
-				optimizer, mode = "max", factor = 0.5, patience = 2, )
+				optimizer, mode = "min", factor = 0.5, patience = 2, )
+			# Give fine-tuning its own loss-based patience window.
+			best_validation_loss = float( "inf" )
+			epochs_without_improvement = 0
 
 		# ----------------------------------------------------
 		# Train
@@ -563,7 +594,7 @@ def train_model(model_name: str):
 		# ----------------------------------------------------
 
 		scheduler.step(
-			validation_accuracy
+			validation_loss
 		)
 
 		current_learning_rate = (optimizer.param_groups[0]["lr"])
@@ -591,6 +622,7 @@ def train_model(model_name: str):
 		history["learning_rate"].append(
 			current_learning_rate
 		)
+		history["classifier_learning_rate"].append( optimizer.param_groups[-1]["lr"] )
 
 		# ----------------------------------------------------
 		# Print epoch results
@@ -633,23 +665,29 @@ def train_model(model_name: str):
 
 			best_validation_accuracy = (validation_accuracy)
 
-			epochs_without_improvement = 0
-
 			save_checkpoint(
-				model = model, optimizer = optimizer, scheduler = scheduler, epoch = epoch, validation_accuracy = (validation_accuracy), model_name = model_name, checkpoint_path = checkpoint_path, )
+				model = model, optimizer = optimizer, scheduler = scheduler, epoch = epoch, validation_accuracy = (validation_accuracy), model_name = model_name, checkpoint_path = checkpoint_path, validation_loss = validation_loss, )
 
 			print(
 				"✓ Best model saved."
 			)
 
+		# Save by accuracy for deployment, but stop by loss to detect overconfidence.
+		if validation_loss < best_validation_loss:
+			best_validation_loss = validation_loss
+			epochs_without_improvement = 0
 		else:
 
 			epochs_without_improvement += 1
 
 			print(
-				f"No improvement for "
+				f"No validation loss improvement for "
 				f"{epochs_without_improvement} epoch(s)."
 			)
+
+		# Persist completed epochs so interrupted local runs retain their history.
+		with open( history_path, "w", encoding = "utf-8" ) as file:
+			json.dump( history, file, indent = 4 )
 
 		# ----------------------------------------------------
 		# Early stopping

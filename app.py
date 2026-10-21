@@ -6,7 +6,7 @@ CUB-200 Bird Species Classification Web Application
 
 Features:
 1. Print PyTorch and CUDA environment information.
-2. Load the trained EfficientNet-B0 checkpoint.
+2. Select the trained checkpoint with the highest validation accuracy.
 3. Load the mapping between class indices and bird species.
 4. Predict the top-5 bird species from an uploaded image.
 5. Run on either CPU or CUDA.
@@ -14,6 +14,7 @@ Features:
 
 import os
 import json
+import math
 from pathlib import Path
 
 import gradio as gr
@@ -60,8 +61,9 @@ DEVICE = torch.device(
 # The project root is the directory containing app.py.
 APP_DIR = Path( __file__ ).resolve().parent
 
-# Optional local checkpoint location.
-LOCAL_CHECKPOINT = (APP_DIR / "models" / "checkpoints" / "best_models.pth")
+# Prefer local checkpoints; use Hugging Face when no local checkpoints exist.
+LOCAL_CHECKPOINT_DIR = APP_DIR / "models" / "checkpoints"
+SUPPORTED_MODELS = ("resnet18", "resnet50", "efficientnet_b0")
 
 # Image preprocessing must match the evaluation pipeline
 # used during training.
@@ -77,73 +79,42 @@ IMAGE_TRANSFORM = transforms.Compose(
 # 3. Find and Download the Model Checkpoint
 # ============================================================
 
-def find_checkpoint_filename():
+def select_best_checkpoint(checkpoint_paths):
+	"""Rank the checkpoints themselves, never stale history or test-result JSON.
+
+	Only one checkpoint is read at a time on CPU. Ties use filename order,
+	so selection is reproducible and does not favour a particular architecture.
 	"""
-	Find a suitable trained checkpoint in the Hugging Face
-	Model repository.
-
-	Preferred filenames are checked first. If the repository
-	contains several possible checkpoint files, prefer a file
-	whose name includes both 'efficientnet_b0' and 'best'.
-	"""
-
-	api = HfApi()
-
-	repo_files = api.list_repo_files(
-		repo_id = MODEL_REPO_ID, repo_type = "model", )
-
-	# Prefer the known best-checkpoint filename.
-	preferred_names = [
-		"efficientnet_b0_best.pth", "efficientnet_b0_best.pt", "best_model.pth", "best_model.pt", "checkpoint.pth", "model.pth", "models.pth", "best.pth",
-	]
-
-	for filename in preferred_names:
-		if filename in repo_files:
-			return filename
-
-	# Look for other PyTorch checkpoint filenames.
-	candidates = [filename for filename in repo_files if filename.lower().endswith( (".pth", ".pt", ".bin") ) and "/" not in filename]
-
-	best_candidates = [filename for filename in candidates if "efficientnet_b0" in filename.lower() and "best" in filename.lower()]
-
-	if len( best_candidates ) == 1:
-		return best_candidates[0]
-
-	if len( candidates ) == 1:
-		return candidates[0]
-
-	if not candidates:
-		raise FileNotFoundError(
-			"No PyTorch checkpoint was found in the Model "
-			f"repository: {MODEL_REPO_ID}. "
-			"Please upload your trained .pth or .pt file."
-		)
-
-	raise RuntimeError(
-		"Multiple possible checkpoint files were found: "
-		f"{candidates}. Please set the correct filename "
-		"explicitly in find_checkpoint_filename()."
-	)
+	best_path = None
+	best_accuracy = -1.0
+	for path in sorted( checkpoint_paths, key = str ):
+		checkpoint = torch.load( path, map_location = "cpu", weights_only = True )
+		model_name = checkpoint.get( "model_name" )
+		accuracy = checkpoint.get( "validation_accuracy" )
+		if model_name not in SUPPORTED_MODELS:
+			raise ValueError( f"Unsupported or missing model_name in checkpoint: {path}" )
+		if not isinstance( accuracy, (int, float) ) or not math.isfinite( accuracy ) or not 0 <= accuracy <= 1:
+			raise ValueError( f"Checkpoint must record validation_accuracy between 0 and 1: {path}" )
+		print( f"Candidate: {model_name}, validation accuracy: {accuracy:.2%}" )
+		if accuracy > best_accuracy:
+			best_path, best_accuracy = path, accuracy
+		del checkpoint
+	if best_path is None:
+		raise FileNotFoundError( "No trained model checkpoints were found." )
+	return str( best_path )
 
 
 def get_checkpoint_path():
-	"""
-	Use a local checkpoint if it exists.
-	Otherwise, download the checkpoint from Hugging Face.
-	"""
+	"""Select the best available local model, or rank repository models on fallback."""
+	local_paths = [p for p in LOCAL_CHECKPOINT_DIR.glob( "*" ) if p.suffix.lower() in (".pth", ".pt", ".bin")]
+	if local_paths:
+		return select_best_checkpoint( local_paths )
 
-	if LOCAL_CHECKPOINT.is_file():
-		print(
-			"Loading local checkpoint:", LOCAL_CHECKPOINT, )
-		return str( LOCAL_CHECKPOINT )
-
-	checkpoint_filename = find_checkpoint_filename()
-
-	print(
-		"Downloading checkpoint:", checkpoint_filename, )
-
-	return hf_hub_download(
-		repo_id = MODEL_REPO_ID, filename = checkpoint_filename, repo_type = "model", )
+	repo_files = HfApi().list_repo_files( repo_id = MODEL_REPO_ID, repo_type = "model" )
+	# Backups in subfolders are not deployment candidates.
+	filenames = sorted( name for name in repo_files if "/" not in name and name.lower().endswith( (".pth", ".pt", ".bin") ) )
+	paths = (hf_hub_download( repo_id = MODEL_REPO_ID, filename = name, repo_type = "model" ) for name in filenames)
+	return select_best_checkpoint( paths )
 
 
 # ============================================================
@@ -262,7 +233,7 @@ def create_inference_model():
 	print( "Model architecture:", model_name )
 	print( "Inference device:", DEVICE )
 
-	return model
+	return model, model_name, checkpoint["validation_accuracy"]
 
 
 # ============================================================
@@ -271,7 +242,8 @@ def create_inference_model():
 
 # Load once when the application starts, not for every image.
 CLASS_MAPPING = load_class_mapping()
-MODEL = create_inference_model()
+MODEL, MODEL_NAME, VALIDATION_ACCURACY = create_inference_model()
+MODEL_LABEL = {"resnet18": "ResNet18", "resnet50": "ResNet50", "efficientnet_b0": "EfficientNet-B0"}[MODEL_NAME]
 
 
 # ============================================================
@@ -328,14 +300,14 @@ with gr.Blocks(
 	title = "CUB-200 Bird Species Classifier", ) as demo:
 
 	gr.Markdown(
-		"""
+		f"""
 		# CUB-200 Bird Species Classifier
 
 		Upload a bird image to classify it into one of
 		the 200 bird species in the CUB-200 dataset.
 
-		The application uses a fine-tuned EfficientNet-B0
-		model developed for COS30082 Assignment 1.
+		The application uses a fine-tuned {MODEL_LABEL} model developed for COS30082 Assignment 1.
+		It is selected automatically by validation accuracy among available checkpoints.
 		"""
 	)
 
@@ -355,15 +327,17 @@ with gr.Blocks(
 		fn = predict_bird, inputs = input_image, outputs = output_label, )
 
 	gr.Markdown(
-		"""
+		f"""
 		---
-		**Model:** EfficientNet-B0
+		**Model:** {MODEL_LABEL}
+
+		**Validation accuracy:** {VALIDATION_ACCURACY:.2%}
 
 		**Dataset:** CUB-200, 200 bird species
 
 		**Input size:** 224 × 224 pixels
 
-		**Inference device:** CPU or CUDA, depending on availability
+		**Inference device:** {DEVICE}
 		"""
 	)
 

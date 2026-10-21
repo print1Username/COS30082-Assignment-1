@@ -123,3 +123,10 @@ models/checkpoints/
 models/history/
 *.pth
 *.json
+
+# Other
+*.pdf
+*.md
+!README.md
+!README.zh-CN.md
+!model_result.md
