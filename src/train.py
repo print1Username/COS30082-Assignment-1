@@ -190,7 +190,7 @@ def train_one_epoch(model, data_loader, criterion, optimizer, device, scaler, ):
 	total = 0
 
 	progress_bar = tqdm(
-		data_loader, desc = "Training", leave = False, dynamic_ncols = True, )
+		data_loader, desc = "Training", leave = False, dynamic_ncols = False, mininterval = 1.0, )
 
 	for images, labels in progress_bar:
 
@@ -239,7 +239,7 @@ def train_one_epoch(model, data_loader, criterion, optimizer, device, scaler, ):
 
 		# Update progress bar.
 		progress_bar.set_postfix(
-			loss = f"{current_loss:.4f}", acc = f"{current_accuracy * 100:.2f}%"
+			loss = f"{current_loss:.4f}", acc = f"{current_accuracy * 100:.2f}%", refresh = False
 		)
 
 	epoch_loss = running_loss / total
@@ -285,7 +285,7 @@ def validate(model, data_loader, criterion, device, ):
 	total = 0
 
 	progress_bar = tqdm(
-		data_loader, desc = "Validation", leave = False, dynamic_ncols = True, )
+		data_loader, desc = "Validation", leave = False, dynamic_ncols = False, mininterval = 1.0, )
 
 	with torch.no_grad():
 
@@ -325,7 +325,7 @@ def validate(model, data_loader, criterion, device, ):
 
 			# Update progress bar.
 			progress_bar.set_postfix(
-				loss = f"{current_loss:.4f}", acc = f"{current_accuracy * 100:.2f}%"
+				loss = f"{current_loss:.4f}", acc = f"{current_accuracy * 100:.2f}%", refresh = False
 			)
 
 	epoch_loss = running_loss / total
