@@ -17,13 +17,13 @@
 
 | 模型 | 最佳验证准确率 | 测试 Top-1 | 测试每类平均准确率 |
 |---|---:|---:|---:|
-| ResNet18 | 68.84% | 67.36% | 66.76% |
-| **EfficientNet-B0** | **74.95%** | **76.33%** | **75.57%** |
-| ResNet50 | 74.84% | 72.84% | 72.07% |
+| ResNet18 | 66.77% | 65.12% | 64.45% |
+| **EfficientNet-B0** | **74.64%** | **74.75%** | **74.21%** |
+| ResNet50 | 70.91% | 70.02% | 69.09% |
 
-结果直接取自本地 Python 评估文件 `models/results/<model>_test_results.json`。三个模型均使用 1,204 张测试图像和 200 个评估类别，`models/history/<model>_history.json` 中各记录了 35 轮训练。结果文件中的最佳验证准确率与训练历史中的最大值一致。
+结果直接取自本地 Python 评估文件 `models/results/<model>_test_results.json`。三个模型均使用 1,204 张测试图像和 200 个评估类别。`models/history/<model>_history.json` 中，ResNet18 和 ResNet50 各记录了 35 轮训练，EfficientNet-B0 记录了 33 轮。结果文件中的最佳验证准确率与训练历史中的最大值一致。
 
-EfficientNet-B0 的最佳验证准确率（74.95%）、测试 Top-1 准确率（76.33%）和测试每类平均准确率（75.57%）均为最高。上表以这些 JSON 文件为准；[model_result.md](model_result.md) 仍保留旧结果。当前 `src/train.py` 和 `src/evaluate.py` 分别使用 `models/checkpoints/`、`models/history/` 和 `models/results/` 保存模型权重、训练历史和评估结果。新运行可能覆盖同一模型的已有文件。
+EfficientNet-B0 的最佳验证准确率（74.64%）、测试 Top-1 准确率（74.75%）和测试每类平均准确率（74.21%）均为最高。上表和 [model_result.md](model_result.md) 均以这些 JSON 文件为准。当前 `src/train.py` 和 `src/evaluate.py` 分别使用 `models/checkpoints/`、`models/history/` 和 `models/results/` 保存模型权重、训练历史和评估结果。新运行可能覆盖同一模型的已有文件。
 
 ## 快速开始
 

@@ -20,13 +20,13 @@ Image classification for 200 bird species using the Caltech-UCSD Birds 200 (CUB-
 
 | Model | Best validation accuracy | Test Top-1 | Test average per-class |
 |---|---:|---:|---:|
-| ResNet18 | 68.84% | 67.36% | 66.76% |
-| **EfficientNet-B0** | **74.95%** | **76.33%** | **75.57%** |
-| ResNet50 | 74.84% | 72.84% | 72.07% |
+| ResNet18 | 66.77% | 65.12% | 64.45% |
+| **EfficientNet-B0** | **74.64%** | **74.75%** | **74.21%** |
+| ResNet50 | 70.91% | 70.02% | 69.09% |
 
-Results are taken directly from the local Python evaluation files `models/results/<model>_test_results.json`. All three models use 1,204 test images and 200 evaluated classes, and each has 35 recorded epochs in `models/history/<model>_history.json`. The best validation accuracies in the result files match the maxima in the training histories.
+Results are taken directly from the local Python evaluation files `models/results/<model>_test_results.json`. All three models use 1,204 test images and 200 evaluated classes. The training histories in `models/history/<model>_history.json` record 35 epochs for ResNet18 and ResNet50, and 33 for EfficientNet-B0. The best validation accuracies in the result files match the maxima in the training histories.
 
-EfficientNet-B0 has the highest best validation accuracy (74.95%), test Top-1 accuracy (76.33%) and test average per-class accuracy (75.57%). These JSON files are the source for the table above; [model_result.md](model_result.md) still contains older results. The current `src/train.py` and `src/evaluate.py` use `models/checkpoints/`, `models/history/`, and `models/results/` for model weights, training histories, and evaluation results, respectively. New runs can overwrite existing files for the same model.
+EfficientNet-B0 has the highest best validation accuracy (74.64%), test Top-1 accuracy (74.75%) and test average per-class accuracy (74.21%). These JSON files are the source for the table above and [model_result.md](model_result.md). The current `src/train.py` and `src/evaluate.py` use `models/checkpoints/`, `models/history/`, and `models/results/` for model weights, training histories, and evaluation results, respectively. New runs can overwrite existing files for the same model.
 
 ## Quick start
 
