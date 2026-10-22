@@ -3,7 +3,7 @@
 [![English](https://img.shields.io/badge/Language-English-blue?style=for-the-badge)](README.md)
 [![简体中文](https://img.shields.io/badge/Language-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-red?style=for-the-badge)](README.zh-CN.md)
 
-使用 Caltech-UCSD Birds 200（CUB-200）数据集，对 200 种鸟类进行图像分类。项目比较 ResNet18、ResNet50 和 EfficientNet-B0 的迁移学习效果，提供本地 Python、本地 Jupyter notebook 和独立的 Google Colab 版本。ResNet50 在下方已有结果中领先；网页应用会根据验证准确率自动选择模型。
+使用 Caltech-UCSD Birds 200（CUB-200）数据集，对 200 种鸟类进行图像分类。项目比较 ResNet18、ResNet50 和 EfficientNet-B0 的迁移学习效果，提供本地 Python、本地 Jupyter notebook 和独立的 Google Colab 版本。EfficientNet-B0 在下方已有结果中领先；网页应用会根据验证准确率自动选择模型。
 
 ## 项目链接
 
@@ -17,13 +17,13 @@
 
 | 模型 | 最佳验证准确率 | 测试 Top-1 | 测试每类平均准确率 |
 |---|---:|---:|---:|
-| ResNet18 | 70.19% | 69.60% | 69.18% |
-| EfficientNet-B0 | 72.57% | 70.93% | 69.87% |
-| **ResNet50** | **78.99%** | **76.91%** | **76.16%** |
+| ResNet18 | 68.84% | 67.36% | 66.76% |
+| **EfficientNet-B0** | **74.95%** | **76.33%** | **75.57%** |
+| ResNet50 | 74.84% | 72.84% | 72.07% |
 
-所有结果均基于 1,204 张测试图像和 200 个评估类别。详细结果请查看 [model_result.md](model_result.md)。
+结果直接取自本地 Python 评估文件 `models/results/<model>_test_results.json`。三个模型均使用 1,204 张测试图像和 200 个评估类别，`models/history/<model>_history.json` 中各记录了 35 轮训练。结果文件中的最佳验证准确率与训练历史中的最大值一致。
 
-以上是过拟合修复前的已有结果。修改后的代码尚未完成完整重训和评估，因此此表不能证明本次修复的效果。重新训练后，应比较验证表现和最终测试指标，再更新报告中的结果。
+EfficientNet-B0 的最佳验证准确率（74.95%）、测试 Top-1 准确率（76.33%）和测试每类平均准确率（75.57%）均为最高。上表以这些 JSON 文件为准；[model_result.md](model_result.md) 仍保留旧结果。当前 `src/train.py` 和 `src/evaluate.py` 将新运行的输出保存到 `models/partial_finetune/`；上表使用的是现有 `models/results/` 文件。
 
 ## 快速开始
 

@@ -6,7 +6,7 @@
 [![简体中文](https://img.shields.io/badge/Language-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-red?style=for-the-badge)](README.zh-CN.md)
 </div>
 
-Image classification for 200 bird species using the Caltech-UCSD Birds 200 (CUB-200) dataset. The project compares ResNet18, ResNet50 and EfficientNet-B0 with transfer learning. It includes local Python scripts, local Jupyter notebooks, and a separate Google Colab version. ResNet50 leads the recorded results below; the app automatically selects its model by validation accuracy.
+Image classification for 200 bird species using the Caltech-UCSD Birds 200 (CUB-200) dataset. The project compares ResNet18, ResNet50 and EfficientNet-B0 with transfer learning. It includes local Python scripts, local Jupyter notebooks, and a separate Google Colab version. EfficientNet-B0 leads the recorded results below; the app automatically selects its model by validation accuracy.
 
 ## Links
 
@@ -20,13 +20,13 @@ Image classification for 200 bird species using the Caltech-UCSD Birds 200 (CUB-
 
 | Model | Best validation accuracy | Test Top-1 | Test average per-class |
 |---|---:|---:|---:|
-| ResNet18 | 70.19% | 69.60% | 69.18% |
-| EfficientNet-B0 | 72.57% | 70.93% | 69.87% |
-| **ResNet50** | **78.99%** | **76.91%** | **76.16%** |
+| ResNet18 | 68.84% | 67.36% | 66.76% |
+| **EfficientNet-B0** | **74.95%** | **76.33%** | **75.57%** |
+| ResNet50 | 74.84% | 72.84% | 72.07% |
 
-All results use 1,204 test images and 200 evaluated classes. See [model_result.md](model_result.md) for details.
+Results are taken directly from the local Python evaluation files `models/results/<model>_test_results.json`. All three models use 1,204 test images and 200 evaluated classes, and each has 35 recorded epochs in `models/history/<model>_history.json`. The best validation accuracies in the result files match the maxima in the training histories.
 
-These are the existing results from before the overfitting fixes. A complete retraining and evaluation with the revised code has not been completed, so this table does not demonstrate the effect of the fixes. After retraining, compare validation performance and the final test metrics before updating the reported results.
+EfficientNet-B0 has the highest best validation accuracy (74.95%), test Top-1 accuracy (76.33%) and test average per-class accuracy (75.57%). These JSON files are the source for the table above; [model_result.md](model_result.md) still contains older results. The current `src/train.py` and `src/evaluate.py` write new runs to `models/partial_finetune/`; the results above come from the existing `models/results/` files.
 
 ## Quick start
 
