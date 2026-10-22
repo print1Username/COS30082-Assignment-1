@@ -56,14 +56,39 @@ conda create -n cub200 python=3.10 -y
 conda activate cub200
 ```
 
-Install dependencies:
+### 3. Install dependencies
+
+Upgrade pip, then choose **one** of the following PyTorch installation options:
 
 ```bash
 python -m pip install --upgrade pip
-pip install -r requirements.txt
 ```
 
-The requirements file installs the CPU PyTorch build. For a CUDA build, install the matching PyTorch and torchvision versions from the [official PyTorch selector](https://pytorch.org/get-started/locally/), then install the remaining packages from `requirements.txt`.
+**Option A: CPU (Windows/Linux, no NVIDIA GPU required)**
+
+```bash
+python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+python -m pip install -r requirements.txt
+```
+
+**Option B: CUDA (Windows/Linux with a compatible NVIDIA GPU and driver)**
+
+The following example uses the official CUDA 12.6 wheel index:
+
+```bash
+python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cu126
+python -m pip install -r requirements.txt
+```
+
+Use the [official PyTorch selector](https://pytorch.org/get-started/locally/) to choose a CUDA build compatible with your system. On macOS, use the selector's macOS installation command instead. Run the selected option in a fresh environment. `requirements.txt` includes a CPU package index, so install your chosen PyTorch build first; the subsequent requirements command keeps the already installed packages that satisfy its unpinned requirements.
+
+Check the installation:
+
+```bash
+python -c "import torch; print('PyTorch:', torch.__version__); print('CUDA available:', torch.cuda.is_available())"
+```
+
+`CUDA available: True` means PyTorch can use the NVIDIA GPU; `False` is expected for the CPU option.
 
 ## Download the data
 

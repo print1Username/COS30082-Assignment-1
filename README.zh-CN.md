@@ -53,14 +53,39 @@ conda create -n cub200 python=3.10 -y
 conda activate cub200
 ```
 
-安装依赖：
+### 3. 安装依赖
+
+先升级 pip，再从下面两种 PyTorch 安装方式中**选择一种**：
 
 ```bash
 python -m pip install --upgrade pip
-pip install -r requirements.txt
 ```
 
-`requirements.txt` 默认安装 CPU 版本的 PyTorch。如果使用 CUDA，请先根据 [PyTorch 官方安装选择器](https://pytorch.org/get-started/locally/) 安装匹配版本的 PyTorch 和 torchvision，再安装 `requirements.txt` 中的其他依赖。
+**方案 A：CPU（Windows/Linux，无需 NVIDIA 显卡）**
+
+```bash
+python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+python -m pip install -r requirements.txt
+```
+
+**方案 B：CUDA（Windows/Linux，需要兼容的 NVIDIA 显卡及驱动）**
+
+下面以官方 CUDA 12.6 软件包索引为例：
+
+```bash
+python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cu126
+python -m pip install -r requirements.txt
+```
+
+请通过 [PyTorch 官方安装选择器](https://pytorch.org/get-started/locally/) 选择与系统兼容的 CUDA 版本。macOS 用户请使用选择器提供的 macOS 安装命令。请在新建的环境中执行所选方案。由于 `requirements.txt` 包含 CPU 软件包索引，应先安装所选版本的 PyTorch；随后安装项目依赖时，会保留已安装且满足未锁定版本要求的软件包。
+
+检查安装结果：
+
+```bash
+python -c "import torch; print('PyTorch:', torch.__version__); print('CUDA available:', torch.cuda.is_available())"
+```
+
+输出 `CUDA available: True` 表示 PyTorch 可以使用 NVIDIA 显卡；CPU 方案输出 `False` 属于正常情况。
 
 ## 下载本地数据
 
