@@ -84,13 +84,14 @@ VALIDATION_SIZE = 0.2
 
 RANDOM_SEED = 42
 
+# Load in the main process to avoid Windows workers duplicating PyTorch DLL memory.
 NUM_WORKERS = 2
 
 DATA_DIR = "data"
 
-CHECKPOINT_DIR = Path( "models" ) / "partial_finetune" / "checkpoints"
+CHECKPOINT_DIR = Path( "models" ) / "checkpoints"
 
-HISTORY_DIR = Path( "models" ) / "partial_finetune" / "history"
+HISTORY_DIR = Path( "models" ) / "history"
 
 
 # ============================================================

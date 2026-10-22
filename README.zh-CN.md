@@ -23,7 +23,7 @@
 
 结果直接取自本地 Python 评估文件 `models/results/<model>_test_results.json`。三个模型均使用 1,204 张测试图像和 200 个评估类别，`models/history/<model>_history.json` 中各记录了 35 轮训练。结果文件中的最佳验证准确率与训练历史中的最大值一致。
 
-EfficientNet-B0 的最佳验证准确率（74.95%）、测试 Top-1 准确率（76.33%）和测试每类平均准确率（75.57%）均为最高。上表以这些 JSON 文件为准；[model_result.md](model_result.md) 仍保留旧结果。当前 `src/train.py` 和 `src/evaluate.py` 将新运行的输出保存到 `models/partial_finetune/`；上表使用的是现有 `models/results/` 文件。
+EfficientNet-B0 的最佳验证准确率（74.95%）、测试 Top-1 准确率（76.33%）和测试每类平均准确率（75.57%）均为最高。上表以这些 JSON 文件为准；[model_result.md](model_result.md) 仍保留旧结果。当前 `src/train.py` 和 `src/evaluate.py` 分别使用 `models/checkpoints/`、`models/history/` 和 `models/results/` 保存模型权重、训练历史和评估结果。新运行可能覆盖同一模型的已有文件。
 
 ## 快速开始
 
@@ -96,6 +96,18 @@ python download_data.py
 ```
 
 > 脚本下载前会清空现有 `data/` 内容。请先备份需要保留的本地数据。
+
+## 训练前检查模型环境
+
+安装依赖并下载数据后，先在项目根目录执行以下检查，再继续训练和评估：
+
+```bash
+python src/models.py
+```
+
+该命令会创建使用 ImageNet 预训练权重的 ResNet18，检查骨干网络的冻结与解冻，并输出参数数量。看到 `Model test completed successfully.` 后再继续。如果本地尚未缓存 ResNet18 预训练权重，首次运行需要联网下载；训练其他架构时，可能还需要下载对应的权重。
+
+`train.py` 和 `evaluate.py` 会自动导入 `models.py`，因此单独执行此检查并非代码层面的强制依赖，也不会生成训练后的 checkpoint。它可以帮助提前发现模型、依赖或预训练权重下载问题。建议执行顺序为：模型检查 → 训练 → 评估；评估需要对应模型训练后生成的 checkpoint。
 
 ## 训练模型
 

@@ -26,7 +26,7 @@ Image classification for 200 bird species using the Caltech-UCSD Birds 200 (CUB-
 
 Results are taken directly from the local Python evaluation files `models/results/<model>_test_results.json`. All three models use 1,204 test images and 200 evaluated classes, and each has 35 recorded epochs in `models/history/<model>_history.json`. The best validation accuracies in the result files match the maxima in the training histories.
 
-EfficientNet-B0 has the highest best validation accuracy (74.95%), test Top-1 accuracy (76.33%) and test average per-class accuracy (75.57%). These JSON files are the source for the table above; [model_result.md](model_result.md) still contains older results. The current `src/train.py` and `src/evaluate.py` write new runs to `models/partial_finetune/`; the results above come from the existing `models/results/` files.
+EfficientNet-B0 has the highest best validation accuracy (74.95%), test Top-1 accuracy (76.33%) and test average per-class accuracy (75.57%). These JSON files are the source for the table above; [model_result.md](model_result.md) still contains older results. The current `src/train.py` and `src/evaluate.py` use `models/checkpoints/`, `models/history/`, and `models/results/` for model weights, training histories, and evaluation results, respectively. New runs can overwrite existing files for the same model.
 
 ## Quick start
 
@@ -99,6 +99,18 @@ python download_data.py
 ```
 
 > The script cleans the existing `data/` contents before downloading. Back up any local data you want to keep.
+
+## Check the model setup before training
+
+After installing dependencies and downloading the data, run this check from the repository root before starting training and evaluation:
+
+```bash
+python src/models.py
+```
+
+This creates an ImageNet-pretrained ResNet18, checks backbone freezing and unfreezing, and prints parameter counts. Wait for `Model test completed successfully.` before continuing. The first run requires internet access if the ResNet18 pretrained weights are not already cached; training another architecture may download its own weights.
+
+`train.py` and `evaluate.py` import `models.py` automatically, so this standalone check is not a strict code dependency and does not create a trained checkpoint. It helps identify model/dependency or pretrained-weight download problems before training. Use the order: model check → training → evaluation; evaluation requires the matching trained checkpoint.
 
 ## Train a model
 
