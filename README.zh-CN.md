@@ -49,8 +49,8 @@ source .venv/bin/activate
 使用 Conda：
 
 ```bash
-conda create -n cub200 python=3.10 -y
-conda activate cub200
+conda create -n cos30082a1 python=3.10 -y
+conda activate cos30082a1
 ```
 
 ### 3. 安装依赖
