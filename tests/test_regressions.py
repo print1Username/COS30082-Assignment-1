@@ -102,6 +102,7 @@ class TrainingTests(unittest.TestCase):
             dataset = torch.utils.data.TensorDataset(torch.rand(200, 3, 8, 8), torch.arange(200))
             loader = torch.utils.data.DataLoader(dataset, batch_size=32)
             namespace.update(CK=output, test_loader=lambda *args: loader, model_of=lambda name: model)
+            notebook["cells"][8]["source"] = ["".join(notebook["cells"][8]["source"]).replace("MODEL = 'efficientnet_b0'", "MODEL = 'resnet50'")]
             with patch.object(namespace["plt"], "show"), contextlib.redirect_stdout(io.StringIO()):
                 exec("".join(notebook["cells"][8]["source"]), namespace)
             namespace["plt"].close("all")
@@ -160,16 +161,20 @@ class TrainingTests(unittest.TestCase):
             self.assertEqual(len(history["train_loss"]), 4)
 
             notebook = notebook_training_namespace()
+            notebook_model = TinyModel()
             notebook.update(WARMUP=1, MAX_EPOCHS=10, PAT=2, CK=output / "notebook_checkpoints",
-                            dev=lambda: torch.device("cpu"), loaders=lambda *args: ([1], [1], []),
-                            model_of=lambda *args: TinyModel(), plot_hist=lambda h: None)
+                            dev=lambda: torch.device("cpu"), loaders=lambda *args: (SimpleNamespace(dataset=SimpleNamespace(indices=[0])), [1], []),
+                            model_of=lambda *args: notebook_model, plot_hist=lambda h: None,
+                            CUB=lambda *args: [1], DataLoader=lambda *args, **kwargs: [1])
             values = iter(validations)
-            notebook["run_epoch"] = lambda *args: (1., .9) if args[-1] else next(values)
+            notebook["run_epoch"] = lambda *args: (1., .9) if args[-1] or args[3] is None else next(values)
             before = set(output.rglob("*.json"))
             with contextlib.redirect_stdout(io.StringIO()):
                 history = notebook["train_model"]("resnet18")
             self.assertEqual(len(history["tr_loss"]), 4)
-            self.assertEqual(set(output.rglob("*.json")), before)
+            saved_history = output / "notebook_checkpoints/resnet18_history.json"
+            self.assertEqual(set(output.rglob("*.json")), before | {saved_history})
+            self.assertEqual(json.loads(saved_history.read_text())["va_acc"], [.1, .2, .3, .4])
             checkpoint = torch.load(output / "notebook_checkpoints/resnet18_best.pth", weights_only=True)
             self.assertEqual(checkpoint["epoch"], 4)
             self.assertEqual(checkpoint["validation_accuracy"], .4)
