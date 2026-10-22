@@ -37,9 +37,9 @@ BATCH_SIZE = 32
 
 DATA_DIR = "data"
 
-CHECKPOINT_DIR = Path( "models" ) / "checkpoints"
+CHECKPOINT_DIR = Path( "models" ) / "partial_finetune" / "checkpoints"
 
-RESULT_DIR = Path( "models" ) / "results"
+RESULT_DIR = Path( "models" ) / "partial_finetune" / "results"
 
 
 # ============================================================

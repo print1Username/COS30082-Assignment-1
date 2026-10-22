@@ -25,17 +25,18 @@ sys.path.insert(0, str(ROOT))
 os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
 
 import train
-from models import freeze_backbone, unfreeze_model
+from models import create_model, freeze_backbone, unfreeze_model, unfreeze_last_block, set_training_mode
 
 
 class TinyModel(nn.Module):
     def __init__(self):
         super().__init__()
         self.features = nn.Sequential(nn.Conv2d(3, 4, 1), nn.BatchNorm2d(4), nn.AdaptiveAvgPool2d(1))
+        self.layer4 = nn.Sequential(nn.Conv2d(4, 4, 1), nn.BatchNorm2d(4))
         self.fc = nn.Linear(4, 2)
 
     def forward(self, images):
-        return self.fc(self.features(images).flatten(1))
+        return self.fc(self.layer4(self.features(images)).flatten(1))
 
 
 def notebook_training_namespace():
@@ -48,6 +49,45 @@ def notebook_training_namespace():
 
 
 class TrainingTests(unittest.TestCase):
+    def test_partial_finetuning_updates_last_block_only_in_both_implementations(self):
+        notebook = notebook_training_namespace()
+        for implementation in ("src", "notebook"):
+            with self.subTest(implementation=implementation):
+                model = TinyModel()
+                (unfreeze_last_block if implementation == "src" else notebook["unfreeze"])(model)
+                before = {name: tensor.clone() for name, tensor in model.state_dict().items()}
+                optimizer = torch.optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=.01)
+                batches = [(torch.rand(8, 3, 8, 8), torch.arange(8) % 2)]
+                args = (model, batches, nn.CrossEntropyLoss(), optimizer, torch.device("cpu"),
+                        torch.amp.GradScaler("cpu", enabled=False))
+                if implementation == "src":
+                    train.train_one_epoch(*args)
+                else:
+                    notebook["run_epoch"](*args, train=True)
+                for name, tensor in model.features.state_dict().items():
+                    self.assertTrue(torch.equal(before["features." + name], tensor), name)
+                self.assertFalse(model.features.training)
+                self.assertTrue(model.layer4.training)
+                self.assertFalse(torch.equal(before["layer4.0.weight"], model.layer4[0].weight))
+                self.assertFalse(torch.equal(before["layer4.1.running_mean"], model.layer4[1].running_mean))
+                self.assertFalse(torch.equal(before["fc.weight"], model.fc.weight))
+
+    def test_actual_architectures_freeze_early_stages_in_both_implementations(self):
+        notebook = notebook_training_namespace()
+        for name in ("resnet18", "resnet50", "efficientnet_b0"):
+            for implementation in ("src", "notebook"):
+                with self.subTest(model=name, implementation=implementation):
+                    model = create_model(name, pretrained=False)
+                    (unfreeze_last_block if implementation == "src" else notebook["unfreeze"])(model)
+                    for key, parameter in model.named_parameters():
+                        expected = key.startswith(("layer4.", "fc.")) if name.startswith("resnet") else key.startswith(("features.7.", "features.8.", "classifier."))
+                        self.assertEqual(parameter.requires_grad, expected, key)
+                    set_training_mode(model)
+                    frozen = model.layer1 if name.startswith("resnet") else model.features[0]
+                    active = model.layer4 if name.startswith("resnet") else model.features[7]
+                    self.assertFalse(frozen.training)
+                    self.assertTrue(active.training)
+
     def test_evaluation_notebook_keeps_results_in_memory(self):
         notebook = json.loads((ROOT / "notebooks/03_evaluation.ipynb").read_text(encoding="utf-8"))
         namespace = {}

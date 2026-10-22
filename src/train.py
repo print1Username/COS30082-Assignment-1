@@ -10,7 +10,7 @@ This script provides:
         Stage 1:
             Train only the final classifier.
         Stage 2:
-            Unfreeze the entire model and fine-tune it.
+            Fine-tune the final feature stage and classifier.
     4. CrossEntropyLoss for 200-class classification.
     5. AdamW optimizer.
     6. ReduceLROnPlateau learning-rate scheduler.
@@ -49,7 +49,7 @@ from torch.optim import AdamW
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from dataset import create_dataloaders
-from models import (create_model, freeze_backbone, unfreeze_model, get_model_summary, )
+from models import (create_model, freeze_backbone, unfreeze_last_block, set_training_mode, get_model_summary, )
 
 # ============================================================
 # Configuration
@@ -67,7 +67,7 @@ WARMUP_EPOCHS = 5
 # Learning rate for the classifier-only stage.
 CLASSIFIER_LR = 1e-3
 
-# Learning rate for full-model fine-tuning.
+# Learning rate for final-stage fine-tuning.
 FINETUNE_LR = 1e-5
 
 # The new classifier can learn faster than the pretrained backbone.
@@ -88,9 +88,9 @@ NUM_WORKERS = 2
 
 DATA_DIR = "data"
 
-CHECKPOINT_DIR = Path( "models" ) / "checkpoints"
+CHECKPOINT_DIR = Path( "models" ) / "partial_finetune" / "checkpoints"
 
-HISTORY_DIR = Path( "models" ) / "history"
+HISTORY_DIR = Path( "models" ) / "partial_finetune" / "history"
 
 
 # ============================================================
@@ -177,13 +177,7 @@ def train_one_epoch(model, data_loader, criterion, optimizer, device, scaler, ):
 		Average training loss and training accuracy.
 	"""
 
-	model.train()
-	# requires_grad=False freezes weights, but not BatchNorm running statistics.
-	# Keep the entire frozen backbone in evaluation mode during classifier warm-up.
-	if not next( model.parameters() ).requires_grad:
-		model.eval()
-		classifier = model.fc if hasattr( model, "fc" ) else model.classifier
-		classifier.train()
+	set_training_mode( model )
 
 	running_loss = 0.0
 	correct = 0
@@ -381,6 +375,7 @@ def save_checkpoint(model, optimizer, scheduler, epoch, validation_accuracy, mod
 		"epoch": epoch, "model_name": model_name, "validation_accuracy": validation_accuracy, "model_state_dict": model.state_dict(), "optimizer_state_dict": optimizer.state_dict(), "scheduler_state_dict": scheduler.state_dict(),
 		"validation_loss": validation_loss,
 		"training_config": {
+			"finetune_scope": "last_feature_stage_and_classifier",
 			"classifier_lr": CLASSIFIER_LR, "backbone_lr": FINETUNE_LR,
 			"finetune_classifier_lr": FINETUNE_CLASSIFIER_LR, "weight_decay": WEIGHT_DECAY,
 			"label_smoothing": 0.1, "warmup_epochs": WARMUP_EPOCHS,
@@ -541,16 +536,16 @@ def train_model(model_name: str):
 	for epoch in range( 1, MAX_EPOCHS + 1 ):
 
 		# ----------------------------------------------------
-		# Switch to full fine-tuning after warm-up.
+		# Switch to final-stage fine-tuning after warm-up.
 		# ----------------------------------------------------
 
 		if epoch == WARMUP_EPOCHS + 1:
 
 			print( "\n" + "-" * 70 )
-			print( "Stage 2: Fine-tuning entire model" )
+			print( "Stage 2: Fine-tuning final feature stage and classifier" )
 			print( "-" * 70 )
 
-			unfreeze_model( model )
+			unfreeze_last_block( model )
 
 			print(
 				"Trainable parameters after unfreezing:"
@@ -565,7 +560,7 @@ def train_model(model_name: str):
 			classifier_ids = { id( parameter ) for parameter in classifier.parameters() }
 			optimizer = AdamW(
 				[
-					{ "params": [p for p in model.parameters() if id( p ) not in classifier_ids], "lr": FINETUNE_LR },
+					{ "params": [p for p in model.parameters() if p.requires_grad and id( p ) not in classifier_ids], "lr": FINETUNE_LR },
 					{ "params": classifier.parameters(), "lr": FINETUNE_CLASSIFIER_LR },
 				], weight_decay = WEIGHT_DECAY, )
 

@@ -184,6 +184,25 @@ def unfreeze_model(model: nn.Module) -> None:
 		parameter.requires_grad = True
 
 
+def unfreeze_last_block(model: nn.Module) -> None:
+	"""Fine-tune the final feature stage and classifier; retain earlier features."""
+	freeze_backbone( model )
+	# EfficientNet's final convolution follows its last MBConv stage.
+	blocks = [model.layer4] if hasattr( model, "fc" ) else list( model.features[-2:] )
+	for block in blocks:
+		for parameter in block.parameters():
+			parameter.requires_grad = True
+
+
+def set_training_mode(model: nn.Module) -> None:
+	"""Keep fully frozen submodules (including BatchNorm/dropout) in eval mode."""
+	model.train()
+	for module in model.modules():
+		parameters = list( module.parameters() )
+		if parameters and not any( parameter.requires_grad for parameter in parameters ):
+			module.eval()
+
+
 def get_model_summary(model: nn.Module) -> dict:
 	"""
 	Calculate the total and trainable number of parameters.
