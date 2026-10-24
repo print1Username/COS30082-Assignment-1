@@ -9,8 +9,8 @@
 
 - GitHub：[COS30082-Assignment-1](https://github.com/print1Username/COS30082-Assignment-1)
 - Hugging Face 主页：[print1Username](https://huggingface.co/print1Username)
-- 数据集：[CUB-200 dataset](https://huggingface.co/datasets/print1Username/COS30082-Assignment-1-dataset)
-- 模型文件：[训练模型仓库](https://huggingface.co/print1Username/COS30082-Assignment-1-model)
+- 数据集：[CUB-200 dataset](https://huggingface.co/datasets/print1Username/COS30082-Individual-Assignment.dataset)
+- 模型文件：[训练模型仓库](https://huggingface.co/print1Username/COS30082-Individual-Assignment.model)
 - 数据和 Google Colab 版本：[Google Drive 共享文件夹](https://drive.google.com/drive/folders/1vLkbNAVSo3dt7mVHacQpqIANziIXmqB_?usp=sharing)
 
 ## 训练结果
