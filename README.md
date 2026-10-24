@@ -10,10 +10,10 @@ Image classification for 200 bird species using the Caltech-UCSD Birds 200 (CUB-
 
 ## Links
 
-- GitHub: [COS30082-Assignment-1](https://github.com/print1Username/COS30082-Assignment-1)
+- GitHub: [COS30082-Individual-Assignment](https://github.com/print1Username/COS30082-Individual-Assignment)
 - Hugging Face profile: [print1Username](https://huggingface.co/print1Username)
-- Dataset: [CUB-200 dataset](https://huggingface.co/datasets/print1Username/COS30082-Assignment-1-dataset)
-- Model files: [trained model repository](https://huggingface.co/print1Username/COS30082-Assignment-1-model)
+- Dataset: [CUB-200 dataset](https://huggingface.co/datasets/print1Username/COS30082-Individual-Assignment.dataset)
+- Model files: [trained model repository](https://huggingface.co/print1Username/COS30082-Individual-Assignment.model)
 - Data and Google Colab version: [shared Google Drive folder](https://drive.google.com/drive/folders/1vLkbNAVSo3dt7mVHacQpqIANziIXmqB_?usp=sharing)
 
 ## Results
